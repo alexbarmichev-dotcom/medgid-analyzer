@@ -65,10 +65,6 @@ const Hero = () => {
               draggable={false}
             />
 
-            <span className="absolute top-4 right-4 rounded-full bg-accent px-2.5 py-1 text-xs font-semibold text-accent-foreground shadow-sm">
-              2 отклонения
-            </span>
-
             {/* handwritten green mark — холестерин */}
             <span className="absolute left-[68%] top-[31.5%] h-[9%] w-[22%] -rotate-3 rounded-[50%] border-[3px] border-[#0FA968] shadow-[0_0_0_1px_rgba(255,255,255,0.35)]" />
             <span className="absolute left-[68%] top-[41%] -rotate-2 font-caveat text-xl font-bold text-[#0FA968] [text-shadow:0_1px_3px_rgba(255,255,255,0.85)]">
