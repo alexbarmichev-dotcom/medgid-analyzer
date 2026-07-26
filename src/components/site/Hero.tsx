@@ -81,20 +81,7 @@ const Hero = () => {
               что это значит?
             </span>
 
-            {/* sticky note — понятное объяснение поверх бланка */}
-            <div className="absolute inset-x-4 bottom-4 -rotate-[1.2deg] rounded-2xl bg-card/95 p-4 shadow-[0_14px_30px_-16px_rgba(28,27,24,0.45)] backdrop-blur-sm">
-              <div className="flex items-start gap-3 text-sm leading-snug text-ink-soft">
-                <span className="mt-0.5 grid h-[22px] w-[22px] flex-none place-items-center rounded-md bg-hand">
-                  <Icon name="Check" size={13} className="text-accent-foreground" />
-                </span>
-                <span>
-                  <span className="font-semibold text-out-range">Холестерин и С-реактивный белок повышены. </span>
-                  МедГид объяснит, что это может значить, и подскажет, что спросить у&nbsp;врача.
-                </span>
-              </div>
-            </div>
-
-            <span className="absolute right-4 bottom-[7.2rem] rotate-[7deg] font-caveat text-xl leading-none text-hand">
+            <span className="absolute right-4 bottom-4 rotate-[7deg] font-caveat text-xl leading-none text-hand">
               ← читаемо!
             </span>
           </div>
