@@ -63,7 +63,7 @@ const Hero = () => {
             <img
               src="https://cdn.poehali.dev/projects/a50bf440-39eb-48cd-8c9b-26529e75ba50/bucket/26028d96-5831-4ee2-bdc2-1ed20587a685.jpeg"
               alt="Бланк анализа крови с рукописными результатами"
-              className="block w-full h-auto select-none opacity-30"
+              className="block w-full h-auto select-none opacity-40"
               draggable={false}
             />
 
