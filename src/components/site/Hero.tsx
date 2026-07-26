@@ -53,64 +53,48 @@ const Hero = () => {
 
         {/* right column — lab card */}
         <div className="relative">
-          <span className="absolute -top-2 left-[42%] z-20 -rotate-6 font-caveat text-2xl text-hand">
+          <span className="absolute -top-2 left-[38%] z-20 -rotate-6 font-caveat text-2xl text-hand">
             вот тут и&nbsp;начинается разговор
           </span>
 
-          <div className="relative rotate-[1.4deg] animate-floaty rounded-[26px] bg-card p-6 shadow-[0_26px_50px_-30px_rgba(28,27,24,0.5)]">
-            <div className="mb-4 flex items-center justify-between border-b border-paper-line pb-4">
-              <span className="text-sm font-medium text-muted-foreground">
-                Биохимия крови · загружено фото
-              </span>
-              <span className="rounded-full bg-accent/10 px-2.5 py-1 text-xs font-semibold text-out-range">
-                2 отклонения
-              </span>
-            </div>
+          <div className="relative overflow-hidden rotate-[1.4deg] animate-floaty rounded-[22px] shadow-[0_26px_50px_-30px_rgba(28,27,24,0.5)]">
+            <img
+              src="https://cdn.poehali.dev/projects/a50bf440-39eb-48cd-8c9b-26529e75ba50/bucket/26028d96-5831-4ee2-bdc2-1ed20587a685.jpeg"
+              alt="Бланк анализа крови с рукописными результатами"
+              className="block w-full h-auto select-none"
+              draggable={false}
+            />
 
-            {/* row 1 — high */}
-            <div className="mb-5">
-              <div className="mb-2 flex items-baseline justify-between">
-                <span className="text-[0.95rem] font-semibold">Гемоглобин</span>
-                <span className="font-head text-base font-semibold text-out-range">168 г/л ↑</span>
-              </div>
-              <div className="relative h-2 rounded-full bg-[hsl(var(--hero-track))]">
-                <div className="absolute bottom-0 top-0 left-[16%] right-[8%] rounded-full bg-out-range/30" />
-                <span className="absolute -top-1 left-[88%] h-4 w-4 -translate-x-1/2 rounded-full border-[3.4px] border-card bg-out-range" />
-              </div>
-              <div className="mt-1.5 flex justify-between text-xs text-muted-foreground">
-                <span>норма 130–160</span>
-                <span>ваш результат</span>
-              </div>
-            </div>
+            <span className="absolute top-4 right-4 rounded-full bg-accent px-2.5 py-1 text-xs font-semibold text-accent-foreground shadow-sm">
+              2 отклонения
+            </span>
 
-            {/* row 2 — ok */}
-            <div>
-              <div className="mb-2 flex items-baseline justify-between">
-                <span className="text-[0.95rem] font-semibold">Витамин&nbsp;D</span>
-                <span className="font-head text-base font-semibold text-in-range">41 нг/мл</span>
-              </div>
-              <div className="relative h-2 rounded-full bg-[hsl(var(--hero-track))]">
-                <div className="absolute bottom-0 top-0 left-[16%] right-[38%] rounded-full bg-in-range/30" />
-                <span className="absolute -top-1 left-[52%] h-4 w-4 -translate-x-1/2 rounded-full border-[3.4px] border-card bg-in-range" />
-              </div>
-              <div className="mt-1.5 flex justify-between text-xs text-muted-foreground">
-                <span>норма 30–100</span>
-                <span>в пределах нормы</span>
+            {/* handwritten green mark — холестерин */}
+            <span className="absolute left-[52%] top-[30%] h-[6.5%] w-[34%] -rotate-3 rounded-[50%] border-[3px] border-hand" />
+            <span className="absolute left-[57%] top-[36.5%] -rotate-2 font-caveat text-lg text-hand">
+              выше нормы!
+            </span>
+
+            {/* handwritten green mark — С-реактивный белок */}
+            <span className="absolute left-[50%] top-[57%] h-[6%] w-[32%] rotate-2 rounded-[50%] border-[3px] border-hand" />
+            <span className="absolute left-[52%] top-[63%] rotate-1 font-caveat text-lg text-hand">
+              что это значит?
+            </span>
+
+            {/* sticky note — понятное объяснение поверх бланка */}
+            <div className="absolute inset-x-4 bottom-4 -rotate-[1.2deg] rounded-2xl bg-card/95 p-4 shadow-[0_14px_30px_-16px_rgba(28,27,24,0.45)] backdrop-blur-sm">
+              <div className="flex items-start gap-3 text-sm leading-snug text-ink-soft">
+                <span className="mt-0.5 grid h-[22px] w-[22px] flex-none place-items-center rounded-md bg-hand">
+                  <Icon name="Check" size={13} className="text-accent-foreground" />
+                </span>
+                <span>
+                  <span className="font-semibold text-out-range">Холестерин и С-реактивный белок повышены. </span>
+                  МедГид объяснит, что это может значить, и подскажет, что спросить у&nbsp;врача.
+                </span>
               </div>
             </div>
 
-            <div className="mt-5 flex items-start gap-3 border-t border-paper-line pt-4 text-sm leading-snug text-ink-soft">
-              <span className="mt-0.5 grid h-[22px] w-[22px] flex-none place-items-center rounded-md bg-hand">
-                <Icon name="Check" size={13} className="text-accent-foreground" />
-              </span>
-              <span>
-                <span className="font-semibold text-out-range">Немного выше нормы. </span>
-                Часто связано с обезвоживанием или высотой. Стоит пересдать натощак и обсудить
-                с&nbsp;терапевтом.
-              </span>
-            </div>
-
-            <span className="absolute -right-6 bottom-5 rotate-[7deg] font-caveat text-xl leading-none text-hand">
+            <span className="absolute right-4 bottom-[7.2rem] rotate-[7deg] font-caveat text-xl leading-none text-hand">
               ← читаемо!
             </span>
           </div>
