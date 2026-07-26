@@ -70,14 +70,14 @@ const Hero = () => {
             </span>
 
             {/* handwritten green mark — холестерин */}
-            <span className="absolute left-[52%] top-[30%] h-[6.5%] w-[34%] -rotate-3 rounded-[50%] border-[3px] border-hand" />
-            <span className="absolute left-[57%] top-[36.5%] -rotate-2 font-caveat text-lg text-hand">
+            <span className="absolute left-[68%] top-[31.5%] h-[9%] w-[22%] -rotate-3 rounded-[50%] border-[3px] border-[#0FA968] shadow-[0_0_0_1px_rgba(255,255,255,0.35)]" />
+            <span className="absolute left-[68%] top-[41%] -rotate-2 font-caveat text-xl font-bold text-[#0FA968] [text-shadow:0_1px_3px_rgba(255,255,255,0.85)]">
               выше нормы!
             </span>
 
             {/* handwritten green mark — С-реактивный белок */}
-            <span className="absolute left-[50%] top-[57%] h-[6%] w-[32%] rotate-2 rounded-[50%] border-[3px] border-hand" />
-            <span className="absolute left-[52%] top-[63%] rotate-1 font-caveat text-lg text-hand">
+            <span className="absolute left-[62%] top-[61.5%] h-[9%] w-[34%] rotate-2 rounded-[50%] border-[3px] border-[#0FA968] shadow-[0_0_0_1px_rgba(255,255,255,0.35)]" />
+            <span className="absolute left-[62%] top-[57%] rotate-1 font-caveat text-xl font-bold text-[#0FA968] [text-shadow:0_1px_3px_rgba(255,255,255,0.85)]">
               что это значит?
             </span>
 
