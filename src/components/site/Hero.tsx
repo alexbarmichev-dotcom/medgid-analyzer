@@ -29,7 +29,7 @@ const Hero = () => {
             <span className="font-normal text-muted-foreground">Пришли результаты анализов из&nbsp;лаборатории.</span>
             <br />
             И&nbsp;что мне с&nbsp;этим{' '}
-            <span className="hand-underline text-accent">делать?»</span>
+            <span className="hand-underline text-accent">делать?</span>
           </h1>
 
           <p className="mt-6 max-w-[30ch] text-lg leading-relaxed text-ink-soft sm:text-xl">
