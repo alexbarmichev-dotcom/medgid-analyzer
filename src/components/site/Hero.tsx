@@ -20,7 +20,7 @@ const Hero = () => {
       <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-12 px-5 py-14 md:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:py-20">
         {/* left column */}
         <div className="animate-fade-in">
-          <span className="mb-5 inline-flex items-center gap-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="mb-5 inline-flex items-center gap-2.5 text-sm font-semibold uppercase tracking-wide text-accent">
             <span className="h-[7px] w-[7px] rounded-full bg-accent" />
             Расшифровка анализов на понятном языке
           </span>
