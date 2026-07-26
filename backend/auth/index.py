@@ -34,11 +34,11 @@ def _sign_token(phone: str, secret: str) -> str:
     return f"{body}.{sig}"
 
 
-def _send_sms(phone: str, code: str) -> bool:
-    """Отправка SMS через sms.ru. Если ключа нет — код возвращается в dev-режиме."""
+def _send_sms(phone: str, code: str) -> Dict[str, Any]:
+    """Отправка SMS через sms.ru. Возвращает {ok, error}."""
     api_id = os.environ.get("SMSRU_API_ID")
     if not api_id:
-        return False
+        return {"ok": False, "error": "no_api_key"}
     try:
         params = urllib.parse.urlencode({
             "api_id": api_id,
@@ -48,10 +48,27 @@ def _send_sms(phone: str, code: str) -> bool:
         })
         url = "https://sms.ru/sms/send?" + params
         with urllib.request.urlopen(url, timeout=10) as resp:
-            data = json.loads(resp.read().decode())
-            return data.get("status") == "OK"
-    except Exception:
-        return False
+            raw = resp.read().decode()
+            data = json.loads(raw)
+            print(f"sms.ru response: {raw}")
+
+            if data.get("status") != "OK":
+                return {
+                    "ok": False,
+                    "error": f"{data.get('status_code')} {data.get('status_text', '')}".strip(),
+                }
+
+            sms_info = ((data.get("sms") or {}).get(phone)) or {}
+            if sms_info.get("status") != "OK":
+                return {
+                    "ok": False,
+                    "error": f"{sms_info.get('status_code')} {sms_info.get('status_text', '')}".strip(),
+                }
+
+            return {"ok": True, "error": None}
+    except Exception as e:
+        print(f"sms.ru send exception: {e}")
+        return {"ok": False, "error": str(e)}
 
 
 def _resp(status: int, body: Dict[str, Any]) -> Dict[str, Any]:
@@ -102,7 +119,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         code = f"{random.randint(0, 9999):04d}"
         _CODES[phone] = {"code": code, "sent_at": now, "attempts": 0}
 
-        _send_sms(phone, code)
+        sms_result = _send_sms(phone, code)
+
+        if not dev_mode and not sms_result["ok"]:
+            # Провайдер настроен, но отправка не удалась — сообщаем честно,
+            # но код всё равно оставляем активным, чтобы можно было запросить заново.
+            return _resp(502, {"error": f"Не удалось отправить SMS: {sms_result['error']}"})
 
         out: Dict[str, Any] = {"ok": True, "message": "Код отправлен на ваш номер"}
         if dev_mode:
