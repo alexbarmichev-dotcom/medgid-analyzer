@@ -1,17 +1,26 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { toast } from '@/hooks/use-toast';
 
+const AUTH_URL = 'https://functions.poehali.dev/8c1cf8ce-6c17-461b-aec5-95a01638aefa';
+
 type Step = 'auth' | 'form' | 'pay' | 'done';
+type AuthPhase = 'phone' | 'code';
 
 const StartFlow = () => {
   const [step, setStep] = useState<Step>('auth');
+  const [authPhase, setAuthPhase] = useState<AuthPhase>('phone');
   const [phone, setPhone] = useState('');
   const [consent, setConsent] = useState(false);
+  const [code, setCode] = useState('');
+  const [sending, setSending] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [resendIn, setResendIn] = useState(0);
   const [gender, setGender] = useState<'m' | 'f' | ''>('');
   const [age, setAge] = useState('');
   const [complaints, setComplaints] = useState('');
@@ -21,7 +30,13 @@ const StartFlow = () => {
 
   const phoneValid = phone.replace(/\D/g, '').length >= 11;
 
-  const onAuth = () => {
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setInterval(() => setResendIn((v) => (v > 0 ? v - 1 : 0)), 1000);
+    return () => clearInterval(t);
+  }, [resendIn]);
+
+  const requestCode = async () => {
     if (!phoneValid) {
       toast({ title: 'Введите корректный номер телефона' });
       return;
@@ -30,7 +45,66 @@ const StartFlow = () => {
       toast({ title: 'Нужно согласие на обработку персональных данных' });
       return;
     }
-    setStep('form');
+    setSending(true);
+    try {
+      const res = await fetch(AUTH_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'request', phone }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: data.error || 'Не удалось отправить код' });
+        return;
+      }
+      setAuthPhase('code');
+      setCode('');
+      setResendIn(60);
+      toast({
+        title: 'Код отправлен',
+        description: data.dev_code
+          ? `Тестовый режим: код ${data.dev_code}`
+          : 'Введите код из SMS',
+      });
+    } catch {
+      toast({ title: 'Ошибка сети, попробуйте ещё раз' });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const verifyCode = async (value: string) => {
+    setVerifying(true);
+    try {
+      const res = await fetch(AUTH_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify', phone, code: value }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: data.error || 'Неверный код' });
+        setCode('');
+        return;
+      }
+      try {
+        localStorage.setItem('medgid_token', data.token);
+        localStorage.setItem('medgid_phone', data.phone);
+      } catch {
+        /* ignore storage errors */
+      }
+      toast({ title: 'Вход выполнен' });
+      setStep('form');
+    } catch {
+      toast({ title: 'Ошибка сети, попробуйте ещё раз' });
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const onCodeChange = (value: string) => {
+    setCode(value);
+    if (value.length === 4) verifyCode(value);
   };
 
   const onSubmit = () => {
@@ -57,8 +131,11 @@ const StartFlow = () => {
 
   const reset = () => {
     setStep('auth');
+    setAuthPhase('phone');
     setPhone('');
     setConsent(false);
+    setCode('');
+    setResendIn(0);
     setGender('');
     setAge('');
     setComplaints('');
@@ -105,9 +182,12 @@ const StartFlow = () => {
         </div>
 
         <div className="rounded-3xl border border-border bg-card p-6 shadow-[0_26px_50px_-40px_rgba(28,27,24,0.5)] md:p-9">
-          {step === 'auth' && (
+          {step === 'auth' && authPhase === 'phone' && (
             <div className="animate-fade-in space-y-5">
-              <h3 className="font-head text-xl font-bold">Авторизация по телефону</h3>
+              <h3 className="font-head text-xl font-bold">Вход по номеру телефона</h3>
+              <p className="text-sm text-ink-soft">
+                Мы отправим код подтверждения в SMS — пароль не нужен.
+              </p>
               <div className="space-y-2">
                 <Label htmlFor="phone">Номер телефона</Label>
                 <Input
@@ -116,6 +196,7 @@ const StartFlow = () => {
                   placeholder="+7 (___) ___-__-__"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && requestCode()}
                 />
               </div>
               <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-background p-4">
@@ -130,12 +211,64 @@ const StartFlow = () => {
                 </span>
               </label>
               <button
-                onClick={onAuth}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius)] bg-accent px-6 py-4 text-base font-semibold text-accent-foreground transition-transform hover:-translate-y-0.5"
+                onClick={requestCode}
+                disabled={sending}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius)] bg-accent px-6 py-4 text-base font-semibold text-accent-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-60"
               >
-                Получить код
-                <Icon name="ArrowRight" size={18} />
+                {sending ? 'Отправляем…' : 'Получить код'}
+                {!sending && <Icon name="ArrowRight" size={18} />}
               </button>
+            </div>
+          )}
+
+          {step === 'auth' && authPhase === 'code' && (
+            <div className="animate-fade-in space-y-5 text-center">
+              <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-accent/10 text-accent">
+                <Icon name="MessageSquareLock" size={26} fallback="MessageSquare" />
+              </span>
+              <div>
+                <h3 className="font-head text-xl font-bold">Введите код из SMS</h3>
+                <p className="mt-2 text-sm text-ink-soft">
+                  Код отправлен на номер <b>{phone}</b>
+                </p>
+              </div>
+
+              <div className="flex justify-center">
+                <InputOTP maxLength={4} value={code} onChange={onCodeChange} disabled={verifying}>
+                  <InputOTPGroup className="gap-2">
+                    {[0, 1, 2, 3].map((i) => (
+                      <InputOTPSlot
+                        key={i}
+                        index={i}
+                        className="h-14 w-14 rounded-xl border border-border bg-background text-xl font-semibold"
+                      />
+                    ))}
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+
+              {verifying && (
+                <p className="text-sm text-muted-foreground">Проверяем код…</p>
+              )}
+
+              <div className="flex flex-col items-center gap-2 pt-1">
+                <button
+                  onClick={requestCode}
+                  disabled={resendIn > 0 || sending}
+                  className="text-sm font-medium text-accent disabled:text-muted-foreground"
+                >
+                  {resendIn > 0 ? `Отправить код повторно через ${resendIn} с` : 'Отправить код повторно'}
+                </button>
+                <button
+                  onClick={() => {
+                    setAuthPhase('phone');
+                    setCode('');
+                  }}
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground"
+                >
+                  Изменить номер
+                </button>
+              </div>
             </div>
           )}
 

@@ -1,0 +1,22 @@
+{
+  "requests": [
+    {
+      "name": "request code",
+      "httpMethod": "POST",
+      "body": {"action": "request", "phone": "+7 999 123-45-67"},
+      "expectedStatusCode": 200
+    },
+    {
+      "name": "bad phone",
+      "httpMethod": "POST",
+      "body": {"action": "request", "phone": "123"},
+      "expectedStatusCode": 400
+    },
+    {
+      "name": "verify without request",
+      "httpMethod": "POST",
+      "body": {"action": "verify", "phone": "+7 900 000-00-01", "code": "1234"},
+      "expectedStatusCode": 400
+    }
+  ]
+}
