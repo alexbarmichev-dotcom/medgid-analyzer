@@ -4,35 +4,44 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* МедГид palette — теплая бумага + красный акцент + медицинский зелёный */
+    --background: 44 33% 92%; /* #F2EEE4 */
+    --foreground: 45 6% 10%; /* #1C1B18 */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 45 50% 97%; /* #FBF9F3 */
+    --card-foreground: 45 6% 10%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 45 50% 97%;
+    --popover-foreground: 45 6% 10%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 45 6% 10%; /* #1C1B18 ink */
+    --primary-foreground: 45 50% 97%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 44 30% 88%;
+    --secondary-foreground: 45 6% 10%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 44 26% 86%; /* #E7E1D2-ish */
+    --muted-foreground: 45 8% 40%; /* #6E6A5E */
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 8 78% 54%; /* #E4442E red */
+    --accent-foreground: 45 50% 97%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 8 78% 54%;
+    --destructive-foreground: 45 50% 97%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 41 27% 83%; /* #DED8C8 paper line */
+    --input: 41 27% 83%;
+    --ring: 8 78% 54%;
 
-    --radius: 0.5rem;
+    --radius: 0.9rem;
+
+    /* Фирменные оттенки МедГид */
+    --hero-hand: 170 80% 27%; /* #0E7C6B medical green */
+    --hero-out-range: 8 78% 54%; /* #E4442E */
+    --hero-in-range: 170 80% 27%;
+    --hero-track: 43 33% 86%; /* #E7E1D2 */
+    --hero-ink-soft: 47 9% 21%; /* #3A382F */
+    --hero-paper-line: 41 27% 83%;
 
     --sidebar-background: 0 0% 98%;
 
@@ -97,5 +106,62 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: "Golos Text", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  /* Рукописная подчёркивающая каракуля (a la Загмайстер) */
+  .hand-underline {
+    position: relative;
+    white-space: nowrap;
+  }
+  .hand-underline::after {
+    content: "";
+    position: absolute;
+    left: -4px;
+    right: -4px;
+    bottom: -0.06em;
+    height: 0.34em;
+    border-bottom: 3px solid hsl(var(--hero-hand));
+    border-radius: 50%;
+    transform: rotate(-1.2deg) scaleX(1.01);
+    opacity: 0.9;
+    pointer-events: none;
+  }
+
+  /* Полоски бумажной сетки для фона секций */
+  .paper-lines {
+    background-image: linear-gradient(
+      hsl(var(--hero-paper-line)) 1px,
+      transparent 1px
+    );
+    background-size: 100% 34px;
+  }
+
+  .font-caveat {
+    font-family: "Caveat", cursive;
+  }
+}
+
+@layer utilities {
+  .animate-floaty {
+    animation: floaty 6s ease-in-out infinite;
+  }
+  @keyframes floaty {
+    50% {
+      transform: rotate(1.4deg) translateY(-8px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-floaty {
+      animation: none;
+    }
   }
 }
