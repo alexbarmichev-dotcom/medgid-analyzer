@@ -8,9 +8,27 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { toast } from '@/hooks/use-toast';
 
 const AUTH_URL = 'https://functions.poehali.dev/8c1cf8ce-6c17-461b-aec5-95a01638aefa';
+const ANALYZE_URL = 'https://functions.poehali.dev/b4dfdccf-8880-4501-b296-550516223859';
 
 type Step = 'auth' | 'form' | 'pay' | 'done';
 type AuthPhase = 'phone' | 'code';
+
+interface UploadedFile {
+  name: string;
+  type: string;
+  data: string; // base64 без префикса
+}
+
+const readAsBase64 = (file: File): Promise<UploadedFile> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve({ name: file.name, type: file.type, data: result.split(',')[1] || '' });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 
 const StartFlow = () => {
   const [step, setStep] = useState<Step>('auth');
@@ -26,7 +44,9 @@ const StartFlow = () => {
   const [complaints, setComplaints] = useState('');
   const [conditions, setConditions] = useState('');
   const [meds, setMeds] = useState('');
-  const [files, setFiles] = useState<string[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [aiResult, setAiResult] = useState('');
 
   const phoneValid = phone.replace(/\D/g, '').length >= 11;
 
@@ -119,14 +139,34 @@ const StartFlow = () => {
     setStep('pay');
   };
 
-  const onPay = () => {
-    toast({ title: 'Оплата пройдена', description: 'Запрос отправлен в нейросеть' });
-    setStep('done');
+  const onPay = async () => {
+    setAnalyzing(true);
+    try {
+      const uploaded = await Promise.all(files.map(readAsBase64));
+      const token = localStorage.getItem('medgid_token') || '';
+      const res = await fetch(ANALYZE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Authorization': token },
+        body: JSON.stringify({ gender, age, complaints, conditions, meds, files: uploaded }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: data.error || 'Не удалось получить расшифровку' });
+        return;
+      }
+      setAiResult(data.result || '');
+      toast({ title: 'Оплата пройдена', description: 'Расшифровка готова' });
+      setStep('done');
+    } catch {
+      toast({ title: 'Ошибка сети, попробуйте ещё раз' });
+    } finally {
+      setAnalyzing(false);
+    }
   };
 
   const addFiles = (list: FileList | null) => {
     if (!list) return;
-    setFiles((prev) => [...prev, ...Array.from(list).map((f) => f.name)]);
+    setFiles((prev) => [...prev, ...Array.from(list)]);
   };
 
   const reset = () => {
@@ -142,6 +182,7 @@ const StartFlow = () => {
     setConditions('');
     setMeds('');
     setFiles([]);
+    setAiResult('');
   };
 
   return (
@@ -364,11 +405,11 @@ const StartFlow = () => {
                   <ul className="space-y-1.5 pt-1">
                     {files.map((f, i) => (
                       <li
-                        key={`${f}-${i}`}
+                        key={`${f.name}-${i}`}
                         className="flex items-center gap-2 text-sm text-ink-soft"
                       >
                         <Icon name="Paperclip" size={14} className="text-hand" />
-                        {f}
+                        {f.name}
                       </li>
                     ))}
                   </ul>
@@ -408,14 +449,16 @@ const StartFlow = () => {
               </div>
               <button
                 onClick={onPay}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius)] bg-accent px-6 py-4 text-base font-semibold text-accent-foreground transition-transform hover:-translate-y-0.5"
+                disabled={analyzing}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius)] bg-accent px-6 py-4 text-base font-semibold text-accent-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-60"
               >
-                Оплатить 250 ₽
-                <Icon name="CreditCard" size={18} />
+                {analyzing ? 'Разбираем анализ…' : 'Оплатить 250 ₽'}
+                {!analyzing && <Icon name="CreditCard" size={18} />}
               </button>
               <button
                 onClick={() => setStep('form')}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground"
+                disabled={analyzing}
+                className="text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-40"
               >
                 Вернуться к данным
               </button>
@@ -427,11 +470,16 @@ const StartFlow = () => {
               <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-hand text-accent-foreground">
                 <Icon name="Check" size={28} />
               </span>
-              <h3 className="font-head text-xl font-bold">Анализ отправлен в обработку</h3>
-              <p className="text-ink-soft">
-                Нейросеть разбирает ваши показатели. Результат появится в личном кабинете уже через
-                несколько секунд.
-              </p>
+              <h3 className="font-head text-xl font-bold">Расшифровка готова</h3>
+              {aiResult ? (
+                <div className="rounded-2xl border border-border bg-background p-5 text-left text-sm leading-relaxed text-ink-soft whitespace-pre-wrap">
+                  {aiResult}
+                </div>
+              ) : (
+                <p className="text-ink-soft">
+                  Нейросеть разобрала ваши показатели. Результат сохранён в личном кабинете.
+                </p>
+              )}
               <button
                 onClick={reset}
                 className="inline-flex items-center justify-center gap-2 rounded-[var(--radius)] border border-border bg-background px-6 py-3.5 text-sm font-semibold text-ink-soft"

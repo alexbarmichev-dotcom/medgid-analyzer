@@ -1,0 +1,25 @@
+{
+  "tests": [
+    {
+      "name": "options preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "no auth token",
+      "method": "POST",
+      "path": "/",
+      "body": {"gender": "m", "age": "30", "files": []},
+      "expectedStatus": 401
+    },
+    {
+      "name": "invalid auth token",
+      "method": "POST",
+      "path": "/",
+      "headers": {"X-Authorization": "invalid.token"},
+      "body": {"gender": "m", "age": "30", "files": []},
+      "expectedStatus": 401
+    }
+  ]
+}
