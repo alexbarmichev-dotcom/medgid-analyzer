@@ -26,7 +26,7 @@ const Hero = () => {
           </span>
 
           <h1 className="font-head text-[2.6rem] font-extrabold leading-[1.02] tracking-[-0.035em] sm:text-[3.4rem] lg:text-[4.3rem]">
-            <span className="font-normal text-muted-foreground">Пришли результаты анализов из&nbsp;лаборатории.</span>
+            <span className="block w-full text-center font-normal text-muted-foreground">Пришли результаты анализов из&nbsp;лаборатории.</span>
             <br />
             И&nbsp;что мне с&nbsp;этим{' '}
             <span className="hand-underline text-accent">делать?</span>
