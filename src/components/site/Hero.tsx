@@ -28,8 +28,10 @@ const Hero = () => {
           <h1 className="font-head text-[2.6rem] font-extrabold leading-[1.02] tracking-[-0.035em] sm:text-[3.4rem] lg:text-[4.3rem]">
             <span className="block w-full text-center font-normal text-muted-foreground">Пришли результаты анализов из&nbsp;лаборатории.</span>
             <br />
-            И&nbsp;что мне с&nbsp;этим{' '}
-            <span className="hand-underline text-accent">делать?</span>
+            <span className="block w-full text-center">
+              И&nbsp;что мне с&nbsp;этим{' '}
+              <span className="hand-underline text-accent">делать?</span>
+            </span>
           </h1>
 
           <p className="mt-6 max-w-[30ch] text-lg leading-relaxed text-ink-soft sm:text-xl">
