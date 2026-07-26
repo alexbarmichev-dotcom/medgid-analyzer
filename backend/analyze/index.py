@@ -40,7 +40,7 @@ def _resp(status: int, body: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _verify_token(token: str, secret: str) -> Optional[str]:
-    """Проверяет токен, выданный функцией auth. Возвращает телефон или None."""
+    """Проверяет токен, выданный функцией auth. Возвращает логин или None."""
     try:
         body_b64, sig = token.split(".")
         expected_sig = hmac.new(secret.encode(), body_b64.encode(), hashlib.sha256).hexdigest()[:32]
@@ -48,7 +48,7 @@ def _verify_token(token: str, secret: str) -> Optional[str]:
             return None
         padded = body_b64 + "=" * (-len(body_b64) % 4)
         payload = json.loads(base64.urlsafe_b64decode(padded))
-        return payload.get("phone")
+        return payload.get("login")
     except Exception:
         return None
 
@@ -117,7 +117,7 @@ def _call_ai(uploaded: List[Dict[str, str]], gender: str, age: str, complaints: 
     return data["choices"][0]["message"]["content"]
 
 
-def _save_analysis(dsn: str, phone: str, gender: str, age: Optional[int], complaints: str,
+def _save_analysis(dsn: str, login: str, gender: str, age: Optional[int], complaints: str,
                     conditions: str, meds: str, file_urls: List[str], ai_result: str) -> int:
     conn = psycopg2.connect(dsn)
     try:
@@ -126,9 +126,9 @@ def _save_analysis(dsn: str, phone: str, gender: str, age: Optional[int], compla
                 return "'" + v.replace("'", "''") + "'" if v else "NULL"
 
             sql = (
-                "INSERT INTO analyses (phone, gender, age, complaints, conditions, meds, "
+                "INSERT INTO analyses (login, gender, age, complaints, conditions, meds, "
                 "file_urls, ai_result, status) VALUES ("
-                f"{esc(phone)}, {esc(gender)}, {age if age is not None else 'NULL'}, "
+                f"{esc(login)}, {esc(gender)}, {age if age is not None else 'NULL'}, "
                 f"{esc(complaints)}, {esc(conditions)}, {esc(meds)}, "
                 f"{esc(json.dumps(file_urls))}::jsonb, {esc(ai_result)}, 'done'"
                 ") RETURNING id"
@@ -146,8 +146,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     Business: принимает данные и сканы анализов из личного кабинета МедГид,
     сохраняет файлы в S3, отправляет их на ИИ-расшифровку (Claude через Polza AI)
     и сохраняет результат в базу данных.
-    Args: event с httpMethod, headers.X-Authorization, body {gender, age, complaints,
-          conditions, meds, files: [{name, type, data(base64)}]}
+    Args: event с httpMethod, headers.X-Authorization (токен логина), body {gender, age,
+          complaints, conditions, meds, files: [{name, type, data(base64)}]}
     Returns: HTTP-ответ с текстом расшифровки от нейросети
     """
     method = event.get("httpMethod", "POST")
@@ -159,8 +159,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     token = token.replace("Bearer ", "").strip()
 
     secret = os.environ.get("AUTH_SECRET", "medgid-dev-secret")
-    phone = _verify_token(token, secret) if token else None
-    if not phone:
+    login = _verify_token(token, secret) if token else None
+    if not login:
         return _resp(401, {"error": "Требуется вход в личный кабинет"})
 
     try:
@@ -195,7 +195,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     try:
         analysis_id = _save_analysis(
-            os.environ["DATABASE_URL"], phone, gender, age, complaints, conditions, meds,
+            os.environ["DATABASE_URL"], login, gender, age, complaints, conditions, meds,
             [f["url"] for f in uploaded], ai_result,
         )
     except Exception:

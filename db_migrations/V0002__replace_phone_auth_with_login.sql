@@ -1,0 +1,8 @@
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    login VARCHAR(64) UNIQUE NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+
+ALTER TABLE analyses RENAME COLUMN phone TO login;
+ALTER TABLE analyses ALTER COLUMN login TYPE VARCHAR(64);

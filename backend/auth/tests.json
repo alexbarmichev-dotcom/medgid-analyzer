@@ -1,22 +1,26 @@
 {
-  "requests": [
+  "tests": [
     {
-      "name": "request code",
-      "httpMethod": "POST",
-      "body": {"action": "request", "phone": "+7 999 123-45-67"},
-      "expectedStatusCode": 200
+      "name": "options preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
     },
     {
-      "name": "bad phone",
-      "httpMethod": "POST",
-      "body": {"action": "request", "phone": "123"},
-      "expectedStatusCode": 400
+      "name": "login too short",
+      "method": "POST",
+      "path": "/",
+      "body": {"login": "a"},
+      "expectedStatus": 400
     },
     {
-      "name": "verify without request",
-      "httpMethod": "POST",
-      "body": {"action": "verify", "phone": "+7 900 000-00-01", "code": "1234"},
-      "expectedStatusCode": 400
+      "name": "register new user",
+      "method": "POST",
+      "path": "/",
+      "body": {"login": "test_user_medgid"},
+      "expectedStatus": 200,
+      "expectedBody": {"ok": true},
+      "bodyMatcher": "partial"
     }
   ]
 }
