@@ -55,7 +55,7 @@ const Hero = () => {
 
         {/* right column — lab card */}
         <div className="relative">
-          <span className="absolute -top-2 left-[38%] z-20 -rotate-6 font-caveat text-2xl text-hand font-thin">
+          <span className="absolute -top-4 left-[38%] z-20 -rotate-6 font-caveat text-4xl font-bold text-[#0FA968] [text-shadow:0_1px_4px_rgba(255,255,255,0.6)]">
             вот тут и&nbsp;начинается разговор
           </span>
 
