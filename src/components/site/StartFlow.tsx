@@ -67,8 +67,26 @@ const formatDate = (iso: string | null) => {
   });
 };
 
+const LOGIN_RE = /^[a-zа-яё]{2,20}-[a-zа-яё]{2,20}$/i;
+
+const ADJECTIVES = [
+  'yasnyi', 'tikhiy', 'bystryi', 'dobryi', 'svetlyi', 'teplyi',
+  'zvonkiy', 'mudryi', 'smelyi', 'yarkiy', 'vernyi', 'chutkiy',
+];
+const NOUNS = [
+  'rassvet', 'oduvanchik', 'kedr', 'rodnik', 'goryzont', 'kolibri',
+  'yantar', 'listopad', 'bereg', 'ogonek', 'compass', 'marshrut',
+];
+
+const generateLogin = () => {
+  const a = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
+  const n = NOUNS[Math.floor(Math.random() * NOUNS.length)];
+  return `${a}-${n}`;
+};
+
 const StartFlow = () => {
   const [step, setStep] = useState<Step>('auth');
+  const [authMode, setAuthMode] = useState<'register' | 'login'>('register');
   const [login, setLogin] = useState('');
   const [consent, setConsent] = useState(false);
   const [entering, setEntering] = useState(false);
@@ -84,7 +102,7 @@ const StartFlow = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  const loginValid = login.trim().length >= 2;
+  const loginValid = LOGIN_RE.test(login.trim());
 
   const loadHistory = async () => {
     setHistoryLoading(true);
@@ -106,10 +124,10 @@ const StartFlow = () => {
 
   const enter = async () => {
     if (!loginValid) {
-      toast({ title: 'Введите логин от 2 символов' });
+      toast({ title: 'Логин должен состоять из двух слов через дефис, например yasnyi-rassvet' });
       return;
     }
-    if (!consent) {
+    if (authMode === 'register' && !consent) {
       toast({ title: 'Нужно согласие на обработку персональных данных' });
       return;
     }
@@ -118,11 +136,11 @@ const StartFlow = () => {
       const res = await fetch(AUTH_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ login: login.trim() }),
+        body: JSON.stringify({ action: authMode, login: login.trim() }),
       });
       const data = await res.json();
       if (!res.ok) {
-        toast({ title: data.error || 'Не удалось войти' });
+        toast({ title: data.error || 'Не удалось выполнить запрос' });
         return;
       }
       try {
@@ -191,6 +209,7 @@ const StartFlow = () => {
 
   const reset = () => {
     setStep('auth');
+    setAuthMode('register');
     setLogin('');
     setConsent(false);
     setGender('');
@@ -255,38 +274,108 @@ const StartFlow = () => {
         <div className="rounded-3xl border border-border bg-card p-6 shadow-[0_26px_50px_-40px_rgba(28,27,24,0.5)] md:p-9">
           {step === 'auth' && (
             <div className="animate-fade-in space-y-5">
-              <h3 className="font-head text-xl font-bold">Вход в личный кабинет</h3>
-              <p className="text-sm text-ink-soft">
-                Придумайте логин — пароль не нужен. Если такой логин уже есть, мы просто войдём в
-                него.
-              </p>
+              <div className="grid grid-cols-2 gap-2 rounded-xl bg-background p-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode('register');
+                    setLogin('');
+                  }}
+                  className={`rounded-lg py-2.5 text-sm font-semibold transition-colors ${
+                    authMode === 'register'
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-ink-soft hover:text-foreground'
+                  }`}
+                >
+                  Регистрация
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode('login');
+                    setLogin('');
+                  }}
+                  className={`rounded-lg py-2.5 text-sm font-semibold transition-colors ${
+                    authMode === 'login'
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-ink-soft hover:text-foreground'
+                  }`}
+                >
+                  Вход
+                </button>
+              </div>
+
+              {authMode === 'register' ? (
+                <>
+                  <h3 className="font-head text-xl font-bold">Придумайте логин</h3>
+                  <p className="text-sm text-ink-soft">
+                    Логин из двух слов через дефис — так меньше риск совпадений и не нужен пароль.
+                    Например: <b>yasnyi-rassvet</b>.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h3 className="font-head text-xl font-bold">Вход по логину</h3>
+                  <p className="text-sm text-ink-soft">
+                    Введите логин, который вы указали при регистрации.
+                  </p>
+                </>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="login">Логин</Label>
-                <Input
-                  id="login"
-                  placeholder="например, ivan_2024"
-                  value={login}
-                  onChange={(e) => setLogin(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && enter()}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="login"
+                    placeholder="slovo-slovo"
+                    value={login}
+                    onChange={(e) => setLogin(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && enter()}
+                  />
+                  {authMode === 'register' && (
+                    <button
+                      type="button"
+                      onClick={() => setLogin(generateLogin())}
+                      title="Сгенерировать логин"
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--radius)] border border-border bg-background text-ink-soft transition-colors hover:border-accent/40 hover:text-accent"
+                    >
+                      <Icon name="Shuffle" size={16} />
+                    </button>
+                  )}
+                </div>
+                {login && !loginValid && (
+                  <p className="text-xs text-destructive">
+                    Формат: два слова через дефис, например yasnyi-rassvet
+                  </p>
+                )}
               </div>
-              <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-background p-4">
-                <Checkbox
-                  checked={consent}
-                  onCheckedChange={(v) => setConsent(Boolean(v))}
-                  className="mt-0.5"
-                />
-                <span className="text-sm leading-snug text-ink-soft">
-                  Я даю согласие на обработку персональных данных в соответствии с 152-ФЗ и принимаю
-                  пользовательское соглашение.
-                </span>
-              </label>
+
+              {authMode === 'register' && (
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-background p-4">
+                  <Checkbox
+                    checked={consent}
+                    onCheckedChange={(v) => setConsent(Boolean(v))}
+                    className="mt-0.5"
+                  />
+                  <span className="text-sm leading-snug text-ink-soft">
+                    Я даю согласие на обработку персональных данных в соответствии с 152-ФЗ и
+                    принимаю пользовательское соглашение.
+                  </span>
+                </label>
+              )}
+
               <button
                 onClick={enter}
                 disabled={entering}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius)] bg-accent px-6 py-4 text-base font-semibold text-accent-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-60"
               >
-                {entering ? 'Входим…' : 'Войти'}
+                {entering
+                  ? authMode === 'register'
+                    ? 'Регистрируем…'
+                    : 'Входим…'
+                  : authMode === 'register'
+                    ? 'Зарегистрироваться'
+                    : 'Войти'}
                 {!entering && <Icon name="ArrowRight" size={18} />}
               </button>
             </div>

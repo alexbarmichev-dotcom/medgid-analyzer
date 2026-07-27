@@ -7,20 +7,27 @@
       "expectedStatus": 200
     },
     {
-      "name": "login too short",
+      "name": "bad login format",
       "method": "POST",
       "path": "/",
-      "body": {"login": "a"},
+      "body": {"action": "register", "login": "abc"},
       "expectedStatus": 400
     },
     {
       "name": "register new user",
       "method": "POST",
       "path": "/",
-      "body": {"login": "test_user_medgid"},
+      "body": {"action": "register", "login": "testovyi-medgid"},
       "expectedStatus": 200,
       "expectedBody": {"ok": true},
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "login not found",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "login", "login": "nikogda-nesuschestvuet"},
+      "expectedStatus": 404
     }
   ]
 }
