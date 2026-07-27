@@ -1,0 +1,23 @@
+{
+  "tests": [
+    {
+      "name": "options preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "no auth token",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 401
+    },
+    {
+      "name": "invalid auth token",
+      "method": "GET",
+      "path": "/",
+      "headers": {"X-Authorization": "invalid.token"},
+      "expectedStatus": 401
+    }
+  ]
+}

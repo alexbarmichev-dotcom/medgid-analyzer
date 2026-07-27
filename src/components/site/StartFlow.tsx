@@ -4,10 +4,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { toast } from '@/hooks/use-toast';
 
 const AUTH_URL = 'https://functions.poehali.dev/8c1cf8ce-6c17-461b-aec5-95a01638aefa';
 const ANALYZE_URL = 'https://functions.poehali.dev/b4dfdccf-8880-4501-b296-550516223859';
+const HISTORY_URL = 'https://functions.poehali.dev/c6e19e20-72b0-4a41-b317-8eb65ffd4dce';
 
 type Step = 'auth' | 'form' | 'pay' | 'done';
 
@@ -15,6 +22,16 @@ interface UploadedFile {
   name: string;
   type: string;
   data: string; // base64 без префикса
+}
+
+interface HistoryItem {
+  number: number;
+  id: number;
+  date: string | null;
+  gender: string | null;
+  age: number | null;
+  result: string | null;
+  status: string;
 }
 
 const readAsBase64 = (file: File): Promise<UploadedFile> =>
@@ -27,6 +44,18 @@ const readAsBase64 = (file: File): Promise<UploadedFile> =>
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+
+const formatDate = (iso: string | null) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
 
 const StartFlow = () => {
   const [step, setStep] = useState<Step>('auth');
@@ -41,8 +70,28 @@ const StartFlow = () => {
   const [files, setFiles] = useState<File[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [aiResult, setAiResult] = useState('');
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const loginValid = login.trim().length >= 2;
+
+  const loadHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const token = localStorage.getItem('medgid_token') || '';
+      const res = await fetch(HISTORY_URL, {
+        headers: { 'X-Authorization': token },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setHistory(data.items || []);
+      }
+    } catch {
+      /* тихо игнорируем — история не критична для основного сценария */
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
   const enter = async () => {
     if (!loginValid) {
@@ -72,6 +121,7 @@ const StartFlow = () => {
         /* ignore storage errors */
       }
       toast({ title: 'Добро пожаловать!' });
+      loadHistory();
       setStep('form');
     } catch {
       toast({ title: 'Ошибка сети, попробуйте ещё раз' });
@@ -110,6 +160,7 @@ const StartFlow = () => {
       setAiResult(data.result || '');
       toast({ title: 'Оплата пройдена', description: 'Расшифровка готова' });
       setStep('done');
+      loadHistory();
     } catch {
       toast({ title: 'Ошибка сети, попробуйте ещё раз' });
     } finally {
@@ -133,6 +184,7 @@ const StartFlow = () => {
     setMeds('');
     setFiles([]);
     setAiResult('');
+    setHistory([]);
   };
 
   return (
@@ -365,27 +417,59 @@ const StartFlow = () => {
           )}
 
           {step === 'done' && (
-            <div className="animate-scale-in space-y-5 text-center">
-              <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-hand text-accent-foreground">
-                <Icon name="Check" size={28} />
-              </span>
-              <h3 className="font-head text-xl font-bold">Расшифровка готова</h3>
-              {aiResult ? (
-                <div className="rounded-2xl border border-border bg-background p-5 text-left text-sm leading-relaxed text-ink-soft whitespace-pre-wrap">
-                  {aiResult}
+            <div className="animate-scale-in space-y-5">
+              <div className="space-y-5 text-center">
+                <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-hand text-accent-foreground">
+                  <Icon name="Check" size={28} />
+                </span>
+                <h3 className="font-head text-xl font-bold">Расшифровка готова</h3>
+                {aiResult ? (
+                  <div className="rounded-2xl border border-border bg-background p-5 text-left text-sm leading-relaxed text-ink-soft whitespace-pre-wrap">
+                    {aiResult}
+                  </div>
+                ) : (
+                  <p className="text-ink-soft">
+                    Нейросеть разобрала ваши показатели. Результат сохранён в личном кабинете.
+                  </p>
+                )}
+                <button
+                  onClick={reset}
+                  className="inline-flex items-center justify-center gap-2 rounded-[var(--radius)] border border-border bg-background px-6 py-3.5 text-sm font-semibold text-ink-soft"
+                >
+                  <Icon name="RotateCcw" size={16} />
+                  Отправить ещё один анализ
+                </button>
+              </div>
+
+              {history.length > 0 && (
+                <div className="border-t border-border pt-6">
+                  <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-soft">
+                    <Icon name="History" size={16} className="text-hand" />
+                    История обращений {historyLoading && '(обновляем…)'}
+                  </h4>
+                  <Accordion type="single" collapsible className="space-y-2">
+                    {history.map((item) => (
+                      <AccordionItem
+                        key={item.id}
+                        value={String(item.id)}
+                        className="rounded-2xl border border-border bg-background px-4"
+                      >
+                        <AccordionTrigger className="py-3 text-left text-sm hover:no-underline">
+                          <span className="flex flex-1 items-center gap-3">
+                            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-accent/10 text-xs font-bold text-accent">
+                              №{item.number}
+                            </span>
+                            <span className="text-ink-soft">{formatDate(item.date)}</span>
+                          </span>
+                        </AccordionTrigger>
+                        <AccordionContent className="text-sm leading-relaxed text-ink-soft whitespace-pre-wrap">
+                          {item.result || 'Результат обрабатывается'}
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
                 </div>
-              ) : (
-                <p className="text-ink-soft">
-                  Нейросеть разобрала ваши показатели. Результат сохранён в личном кабинете.
-                </p>
               )}
-              <button
-                onClick={reset}
-                className="inline-flex items-center justify-center gap-2 rounded-[var(--radius)] border border-border bg-background px-6 py-3.5 text-sm font-semibold text-ink-soft"
-              >
-                <Icon name="RotateCcw" size={16} />
-                Отправить ещё один анализ
-              </button>
             </div>
           )}
         </div>
