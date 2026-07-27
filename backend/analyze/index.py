@@ -102,7 +102,7 @@ def _call_ai(uploaded: List[Dict[str, str]], gender: str, age: str, complaints: 
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": content},
         ],
-        "max_tokens": 2000,
+        "max_tokens": 4096,
     }
 
     req = urllib.request.Request(
@@ -114,7 +114,7 @@ def _call_ai(uploaded: List[Dict[str, str]], gender: str, age: str, complaints: 
         },
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=55) as res:
+    with urllib.request.urlopen(req, timeout=85) as res:
         data = json.loads(res.read().decode())
     return data["choices"][0]["message"]["content"]
 
