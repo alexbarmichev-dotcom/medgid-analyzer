@@ -101,6 +101,7 @@ const StartFlow = () => {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [isFree, setIsFree] = useState(false);
 
   const loginValid = LOGIN_RE.test(login.trim());
 
@@ -149,6 +150,7 @@ const StartFlow = () => {
       } catch {
         /* ignore storage errors */
       }
+      setIsFree(Boolean(data.isFree));
       toast({ title: 'Добро пожаловать!' });
       loadHistory();
       setStep('form');
@@ -166,6 +168,10 @@ const StartFlow = () => {
     }
     if (files.length === 0) {
       toast({ title: 'Загрузите фото или скан анализа' });
+      return;
+    }
+    if (isFree) {
+      onPay();
       return;
     }
     setStep('pay');
@@ -220,6 +226,7 @@ const StartFlow = () => {
     setFiles([]);
     setAiResult('');
     setHistory([]);
+    setIsFree(false);
   };
 
   return (
@@ -384,6 +391,12 @@ const StartFlow = () => {
           {step === 'form' && (
             <div className="animate-fade-in space-y-5">
               <h3 className="font-head text-xl font-bold">Расскажите о себе</h3>
+              {isFree && (
+                <p className="inline-flex items-center gap-2 rounded-xl bg-hand/12 px-4 py-2.5 text-sm font-medium text-hand">
+                  <Icon name="Gift" size={16} />
+                  Для вашего аккаунта разбор анализа бесплатный
+                </p>
+              )}
 
               <div className="grid gap-5 sm:grid-cols-2">
                 <div className="space-y-2">
@@ -494,10 +507,11 @@ const StartFlow = () => {
                 </button>
                 <button
                   onClick={onSubmit}
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-[var(--radius)] bg-accent px-6 py-4 text-base font-semibold text-accent-foreground transition-transform hover:-translate-y-0.5"
+                  disabled={analyzing}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-[var(--radius)] bg-accent px-6 py-4 text-base font-semibold text-accent-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-60"
                 >
-                  Отправить
-                  <Icon name="ArrowRight" size={18} />
+                  {analyzing ? 'Разбираем анализ…' : 'Отправить'}
+                  {!analyzing && <Icon name="ArrowRight" size={18} />}
                 </button>
               </div>
             </div>

@@ -38,13 +38,15 @@ def _resp(status: int, body: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _find_user(dsn: str, login: str) -> bool:
+def _find_user(dsn: str, login: str) -> Optional[bool]:
+    """Возвращает is_free пользователя, если он найден, иначе None."""
     conn = psycopg2.connect(dsn)
     try:
         with conn.cursor() as cur:
             escaped = login.replace("'", "''")
-            cur.execute(f"SELECT 1 FROM users WHERE login = '{escaped}'")
-            return cur.fetchone() is not None
+            cur.execute(f"SELECT is_free FROM users WHERE login = '{escaped}'")
+            row = cur.fetchone()
+            return bool(row[0]) if row else None
     finally:
         conn.close()
 
@@ -106,12 +108,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     if action == "login":
         try:
-            exists = _find_user(dsn, login)
+            is_free = _find_user(dsn, login)
         except Exception:
             return _resp(502, {"error": "Не удалось выполнить вход, попробуйте ещё раз"})
-        if not exists:
+        if is_free is None:
             return _resp(404, {"error": "Такой логин не найден, зарегистрируйтесь"})
         token = _sign_token(login, secret)
-        return _resp(200, {"ok": True, "token": token, "login": login})
+        return _resp(200, {"ok": True, "token": token, "login": login, "isFree": is_free})
 
     return _resp(400, {"error": "Неизвестное действие"})

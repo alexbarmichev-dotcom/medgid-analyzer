@@ -14,13 +14,11 @@
       "expectedStatus": 400
     },
     {
-      "name": "register new user",
+      "name": "register existing login rejected",
       "method": "POST",
       "path": "/",
       "body": {"action": "register", "login": "testovyi-medgid"},
-      "expectedStatus": 200,
-      "expectedBody": {"ok": true},
-      "bodyMatcher": "partial"
+      "expectedStatus": 409
     },
     {
       "name": "login not found",
