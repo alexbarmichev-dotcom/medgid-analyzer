@@ -10,6 +10,13 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 
 const AUTH_URL = 'https://functions.poehali.dev/8c1cf8ce-6c17-461b-aec5-95a01638aefa';
@@ -30,6 +37,9 @@ interface HistoryItem {
   date: string | null;
   gender: string | null;
   age: number | null;
+  complaints: string | null;
+  conditions: string | null;
+  meds: string | null;
   result: string | null;
   status: string;
 }
@@ -72,6 +82,7 @@ const StartFlow = () => {
   const [aiResult, setAiResult] = useState('');
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const loginValid = login.trim().length >= 2;
 
@@ -173,6 +184,11 @@ const StartFlow = () => {
     setFiles((prev) => [...prev, ...Array.from(list)]);
   };
 
+  const openHistory = () => {
+    setHistoryOpen(true);
+    loadHistory();
+  };
+
   const reset = () => {
     setStep('auth');
     setLogin('');
@@ -209,7 +225,7 @@ const StartFlow = () => {
         </div>
 
         {/* progress */}
-        <div className="mb-8 flex items-center justify-center gap-2">
+        <div className="mb-4 flex items-center justify-center gap-2">
           {(['auth', 'form', 'pay', 'done'] as Step[]).map((s, i) => {
             const order = ['auth', 'form', 'pay', 'done'];
             const active = order.indexOf(step) >= i;
@@ -223,6 +239,18 @@ const StartFlow = () => {
             );
           })}
         </div>
+
+        {step !== 'auth' && (
+          <div className="mb-4 flex justify-center">
+            <button
+              onClick={openHistory}
+              className="inline-flex items-center gap-2 text-sm font-medium text-hand hover:underline"
+            >
+              <Icon name="FolderLock" size={15} />
+              Ваша медицинская история
+            </button>
+          </div>
+        )}
 
         <div className="rounded-3xl border border-border bg-card p-6 shadow-[0_26px_50px_-40px_rgba(28,27,24,0.5)] md:p-9">
           {step === 'auth' && (
@@ -432,48 +460,95 @@ const StartFlow = () => {
                     Нейросеть разобрала ваши показатели. Результат сохранён в личном кабинете.
                   </p>
                 )}
-                <button
-                  onClick={reset}
-                  className="inline-flex items-center justify-center gap-2 rounded-[var(--radius)] border border-border bg-background px-6 py-3.5 text-sm font-semibold text-ink-soft"
-                >
-                  <Icon name="RotateCcw" size={16} />
-                  Отправить ещё один анализ
-                </button>
-              </div>
-
-              {history.length > 0 && (
-                <div className="border-t border-border pt-6">
-                  <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-soft">
-                    <Icon name="History" size={16} className="text-hand" />
-                    История обращений {historyLoading && '(обновляем…)'}
-                  </h4>
-                  <Accordion type="single" collapsible className="space-y-2">
-                    {history.map((item) => (
-                      <AccordionItem
-                        key={item.id}
-                        value={String(item.id)}
-                        className="rounded-2xl border border-border bg-background px-4"
-                      >
-                        <AccordionTrigger className="py-3 text-left text-sm hover:no-underline">
-                          <span className="flex flex-1 items-center gap-3">
-                            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-accent/10 text-xs font-bold text-accent">
-                              №{item.number}
-                            </span>
-                            <span className="text-ink-soft">{formatDate(item.date)}</span>
-                          </span>
-                        </AccordionTrigger>
-                        <AccordionContent className="text-sm leading-relaxed text-ink-soft whitespace-pre-wrap">
-                          {item.result || 'Результат обрабатывается'}
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
+                <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+                  <button
+                    onClick={reset}
+                    className="inline-flex items-center justify-center gap-2 rounded-[var(--radius)] border border-border bg-background px-6 py-3.5 text-sm font-semibold text-ink-soft"
+                  >
+                    <Icon name="RotateCcw" size={16} />
+                    Отправить ещё один анализ
+                  </button>
+                  <button
+                    onClick={openHistory}
+                    className="inline-flex items-center justify-center gap-2 rounded-[var(--radius)] bg-hand/12 px-6 py-3.5 text-sm font-semibold text-hand"
+                  >
+                    <Icon name="FolderLock" size={16} />
+                    Ваша медицинская история
+                  </button>
                 </div>
-              )}
+              </div>
             </div>
           )}
         </div>
       </div>
+
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-head text-xl font-bold">
+              <Icon name="FolderLock" size={20} className="text-hand" />
+              Ваша медицинская история
+            </DialogTitle>
+            <DialogDescription>
+              Здесь хранятся все ваши обращения и ответы нейросети. Доступ есть только у вас — по
+              вашему логину.
+            </DialogDescription>
+          </DialogHeader>
+
+          {historyLoading && history.length === 0 && (
+            <p className="py-6 text-center text-sm text-muted-foreground">Загружаем историю…</p>
+          )}
+
+          {!historyLoading && history.length === 0 && (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              Пока нет ни одного запроса. После первого разбора анализа он появится здесь.
+            </p>
+          )}
+
+          {history.length > 0 && (
+            <Accordion type="single" collapsible className="space-y-2">
+              {history.map((item) => {
+                const question = [
+                  item.complaints && `Жалобы: ${item.complaints}`,
+                  item.conditions && `Заболевания: ${item.conditions}`,
+                  item.meds && `Приём лекарств: ${item.meds}`,
+                ]
+                  .filter(Boolean)
+                  .join(' · ') || 'Разбор анализов без дополнительных жалоб';
+                return (
+                  <AccordionItem
+                    key={item.id}
+                    value={String(item.id)}
+                    className="rounded-2xl border border-border bg-background px-4"
+                  >
+                    <AccordionTrigger className="py-3 text-left text-sm hover:no-underline">
+                      <span className="flex flex-1 flex-col gap-1">
+                        <span className="flex items-center gap-3">
+                          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-accent/10 text-xs font-bold text-accent">
+                            №{item.number}
+                          </span>
+                          <span className="font-medium text-foreground">
+                            {formatDate(item.date)}
+                          </span>
+                        </span>
+                        <span className="pl-10 text-xs text-muted-foreground">{question}</span>
+                      </span>
+                    </AccordionTrigger>
+                    <AccordionContent className="space-y-2 text-sm leading-relaxed text-ink-soft">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Ответ нейросети
+                      </p>
+                      <p className="whitespace-pre-wrap">
+                        {item.result || 'Результат обрабатывается'}
+                      </p>
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
+            </Accordion>
+          )}
+        </DialogContent>
+      </Dialog>
     </section>
   );
 };
