@@ -99,7 +99,7 @@ const HistoryDialog = ({ open, onOpenChange, history, historyLoading }: HistoryD
                       <span className="pl-10 text-xs text-muted-foreground">{question}</span>
                     </span>
                   </AccordionTrigger>
-                  <AccordionContent className="space-y-2 text-sm leading-relaxed text-ink-soft">
+                  <AccordionContent className="space-y-2 text-lg leading-relaxed text-ink-soft">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Ответ нейросети
                     </p>

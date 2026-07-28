@@ -267,9 +267,9 @@ const StartFlow = () => {
           <div className="mb-4 flex justify-center">
             <button
               onClick={openHistory}
-              className="inline-flex items-center gap-2 text-sm font-medium text-hand hover:underline"
+              className="inline-flex items-center gap-2 text-lg font-semibold text-hand hover:underline"
             >
-              <Icon name="FolderLock" size={15} />
+              <Icon name="FolderLock" size={20} />
               Ваша медицинская история
             </button>
           </div>

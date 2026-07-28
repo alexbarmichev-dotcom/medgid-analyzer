@@ -53,7 +53,7 @@ export const DoneStep = ({ aiResult, reset, openHistory }: DoneStepProps) => {
         </span>
         <h3 className="font-head text-xl font-bold">Расшифровка готова</h3>
         {aiResult ? (
-          <div className="rounded-2xl border border-border bg-background p-5 text-left text-sm leading-relaxed text-ink-soft whitespace-pre-wrap">
+          <div className="rounded-2xl border border-border bg-background p-6 text-left text-lg leading-relaxed text-ink-soft whitespace-pre-wrap">
             {aiResult}
           </div>
         ) : (
@@ -71,9 +71,9 @@ export const DoneStep = ({ aiResult, reset, openHistory }: DoneStepProps) => {
           </button>
           <button
             onClick={openHistory}
-            className="inline-flex items-center justify-center gap-2 rounded-[var(--radius)] bg-hand/12 px-6 py-3.5 text-sm font-semibold text-hand"
+            className="inline-flex items-center justify-center gap-2 rounded-[var(--radius)] bg-hand/12 px-6 py-3.5 text-lg font-semibold text-hand"
           >
-            <Icon name="FolderLock" size={16} />
+            <Icon name="FolderLock" size={20} />
             Ваша медицинская история
           </button>
         </div>
