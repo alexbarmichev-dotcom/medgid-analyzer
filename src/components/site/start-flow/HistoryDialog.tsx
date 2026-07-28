@@ -1,4 +1,5 @@
 import Icon from '@/components/ui/icon';
+import ReactMarkdown from 'react-markdown';
 import {
   Accordion,
   AccordionContent,
@@ -103,9 +104,36 @@ const HistoryDialog = ({ open, onOpenChange, history, historyLoading }: HistoryD
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Ответ нейросети
                     </p>
-                    <p className="whitespace-pre-wrap">
-                      {item.result || 'Результат обрабатывается'}
-                    </p>
+                    {item.result ? (
+                      <ReactMarkdown
+                        components={{
+                          h2: ({ children }) => (
+                            <h2 className="mb-3 mt-6 text-xl font-bold text-foreground first:mt-0">
+                              {children}
+                            </h2>
+                          ),
+                          h3: ({ children }) => (
+                            <h3 className="mb-2 mt-5 text-lg font-bold text-foreground">
+                              {children}
+                            </h3>
+                          ),
+                          strong: ({ children }) => (
+                            <strong className="font-bold text-foreground">{children}</strong>
+                          ),
+                          p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
+                          ul: ({ children }) => (
+                            <ul className="mb-3 list-disc space-y-1 pl-5">{children}</ul>
+                          ),
+                          ol: ({ children }) => (
+                            <ol className="mb-3 list-decimal space-y-1 pl-5">{children}</ol>
+                          ),
+                        }}
+                      >
+                        {item.result}
+                      </ReactMarkdown>
+                    ) : (
+                      <p>Результат обрабатывается</p>
+                    )}
                   </AccordionContent>
                 </AccordionItem>
               );
