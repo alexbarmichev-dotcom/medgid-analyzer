@@ -1,12 +1,17 @@
 import json
 import os
+import uuid
+import base64
 import hmac
 import hashlib
-import base64
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional
 
 import psycopg2
 import psycopg2.extras
+import boto3
+
+ALLOWED_TYPES = {"question", "suggestion", "wish", "problem"}
+ALLOWED_STATUSES = {"new", "in_progress", "done", "rejected"}
 
 
 def _resp(status: int, body: Dict[str, Any]) -> Dict[str, Any]:
@@ -15,7 +20,7 @@ def _resp(status: int, body: Dict[str, Any]) -> Dict[str, Any]:
         "headers": {
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
             "Access-Control-Allow-Headers": "Content-Type, X-Authorization",
         },
         "isBase64Encoded": False,
@@ -37,17 +42,11 @@ def _verify_token(token: str, secret: str) -> Optional[str]:
         return None
 
 
-def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
-    """
-    Business: возвращает историю запросов пользователя (расшифровок анализов)
-    личного кабинета МедГид с порядковым номером и датой обращения.
-    Args: event с httpMethod, headers.X-Authorization (токен логина)
-    Returns: HTTP-ответ со списком {number, id, date, gender, age, result, status}
-    """
-    method = event.get("httpMethod", "GET")
-    if method == "OPTIONS":
-        return _resp(200, {"ok": True})
+def _esc(v: Optional[str]) -> str:
+    return "'" + v.replace("'", "''") + "'" if v is not None else "NULL"
 
+
+def _handle_history(event: Dict[str, Any]) -> Dict[str, Any]:
     headers = event.get("headers") or {}
     token = headers.get("X-Authorization") or headers.get("x-authorization") or ""
     token = token.replace("Bearer ", "").strip()
@@ -87,3 +86,165 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     items.reverse()  # новые обращения сверху
     return _resp(200, {"ok": True, "items": items})
+
+
+def _upload_screenshot(data_b64: str, mime: str) -> str:
+    s3 = boto3.client(
+        "s3",
+        endpoint_url="https://bucket.poehali.dev",
+        aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+        aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
+    )
+    raw = base64.b64decode(data_b64)
+    ext = (mime.split("/")[-1].split(";")[0] or "png")
+    key = f"feedback/{uuid.uuid4()}.{ext}"
+    s3.put_object(Bucket="files", Key=key, Body=raw, ContentType=mime)
+    return f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{key}"
+
+
+def _create_feedback(dsn: str, f_type: str, subject: str, message: str,
+                      screenshot_url: Optional[str]) -> int:
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor() as cur:
+            sql = (
+                "INSERT INTO feedback (type, subject, message, screenshot_url, status) "
+                f"VALUES ({_esc(f_type)}, {_esc(subject)}, {_esc(message)}, "
+                f"{_esc(screenshot_url)}, 'new') RETURNING id"
+            )
+            cur.execute(sql)
+            new_id = cur.fetchone()[0]
+        conn.commit()
+        return new_id
+    finally:
+        conn.close()
+
+
+def _list_feedback(dsn: str, f_type: Optional[str], status: Optional[str]) -> List[Dict[str, Any]]:
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor() as cur:
+            where = []
+            if f_type and f_type in ALLOWED_TYPES:
+                where.append(f"type = {_esc(f_type)}")
+            if status and status in ALLOWED_STATUSES:
+                where.append(f"status = {_esc(status)}")
+            clause = ("WHERE " + " AND ".join(where)) if where else ""
+            cur.execute(
+                "SELECT id, type, subject, message, screenshot_url, status, created_at "
+                f"FROM feedback {clause} ORDER BY created_at DESC"
+            )
+            rows = cur.fetchall()
+            return [
+                {
+                    "id": r[0],
+                    "type": r[1],
+                    "subject": r[2],
+                    "message": r[3],
+                    "screenshotUrl": r[4],
+                    "status": r[5],
+                    "createdAt": r[6].isoformat(),
+                }
+                for r in rows
+            ]
+    finally:
+        conn.close()
+
+
+def _update_feedback_status(dsn: str, item_id: int, status: str) -> bool:
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"UPDATE feedback SET status = {_esc(status)} WHERE id = {int(item_id)}"
+            )
+            updated = cur.rowcount > 0
+        conn.commit()
+        return updated
+    finally:
+        conn.close()
+
+
+def _handle_feedback(event: Dict[str, Any]) -> Dict[str, Any]:
+    method = event.get("httpMethod", "GET")
+    dsn = os.environ["DATABASE_URL"]
+    params = event.get("queryStringParameters") or {}
+
+    if method == "GET":
+        items = _list_feedback(dsn, params.get("type"), params.get("status"))
+        return _resp(200, {"ok": True, "items": items})
+
+    if method == "POST":
+        try:
+            body = json.loads(event.get("body") or "{}")
+        except Exception:
+            return _resp(400, {"error": "Некорректный запрос"})
+
+        f_type = body.get("type", "")
+        subject = (body.get("subject") or "").strip()
+        message = (body.get("message") or "").strip()
+
+        if f_type not in ALLOWED_TYPES:
+            return _resp(400, {"error": "Некорректный тип обращения"})
+        if not subject:
+            return _resp(400, {"error": "Укажите тему сообщения"})
+        if len(message) < 20:
+            return _resp(400, {"error": "Сообщение должно содержать не менее 20 символов"})
+
+        screenshot_url = None
+        screenshot = body.get("screenshot")
+        if screenshot and screenshot.get("data"):
+            try:
+                screenshot_url = _upload_screenshot(
+                    screenshot["data"], screenshot.get("mime", "image/png")
+                )
+            except Exception:
+                return _resp(502, {"error": "Не удалось загрузить скриншот"})
+
+        try:
+            new_id = _create_feedback(dsn, f_type, subject, message, screenshot_url)
+        except Exception:
+            return _resp(502, {"error": "Не удалось отправить сообщение, попробуйте ещё раз"})
+
+        return _resp(200, {"ok": True, "id": new_id})
+
+    if method == "PATCH":
+        item_id = params.get("id")
+        try:
+            body = json.loads(event.get("body") or "{}")
+        except Exception:
+            return _resp(400, {"error": "Некорректный запрос"})
+        status = body.get("status", "")
+        if not item_id or status not in ALLOWED_STATUSES:
+            return _resp(400, {"error": "Некорректные параметры"})
+        try:
+            updated = _update_feedback_status(dsn, int(item_id), status)
+        except Exception:
+            return _resp(502, {"error": "Не удалось обновить статус"})
+        if not updated:
+            return _resp(404, {"error": "Обращение не найдено"})
+        return _resp(200, {"ok": True})
+
+    return _resp(405, {"error": "Метод не поддерживается"})
+
+
+def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    """
+    Business: возвращает историю запросов пользователя (расшифровок анализов) личного
+    кабинета МедГид, а также принимает и отдаёт обращения пользователей в разделе
+    "Вопросы по работе приложения" (resource=feedback).
+    Args: event с httpMethod, queryStringParameters {resource: 'feedback', type, status, id},
+          headers.X-Authorization (токен логина) для истории,
+          body {type, subject, message, screenshot} для создания обращения,
+          body {status} для обновления статуса обращения администратором
+    Returns: HTTP-ответ со списком истории анализов или данными обращений обратной связи
+    """
+    method = event.get("httpMethod", "GET")
+    if method == "OPTIONS":
+        return _resp(200, {"ok": True})
+
+    params = event.get("queryStringParameters") or {}
+    if params.get("resource") == "feedback":
+        return _handle_feedback(event)
+
+    return _handle_history(event)

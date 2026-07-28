@@ -6,6 +6,7 @@ import Security from '@/components/site/Security';
 import Disclaimer from '@/components/site/Disclaimer';
 import Pricing from '@/components/site/Pricing';
 import StartFlow from '@/components/site/StartFlow';
+import Feedback from '@/components/site/Feedback';
 import Footer from '@/components/site/Footer';
 
 const Index = () => {
@@ -20,6 +21,7 @@ const Index = () => {
         <Disclaimer />
         <Pricing />
         <StartFlow />
+        <Feedback />
       </main>
       <Footer />
     </div>

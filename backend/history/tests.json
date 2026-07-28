@@ -18,6 +18,49 @@
       "path": "/",
       "headers": {"X-Authorization": "invalid.token"},
       "expectedStatus": 401
+    },
+    {
+      "name": "create feedback with valid data",
+      "method": "POST",
+      "path": "/?resource=feedback",
+      "body": {
+        "type": "question",
+        "subject": "Как работает расшифровка?",
+        "message": "Расскажите подробнее, как именно работает расшифровка анализов в приложении."
+      },
+      "expectedStatus": 200,
+      "expectedBody": {"ok": true},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "reject too short feedback message",
+      "method": "POST",
+      "path": "/?resource=feedback",
+      "body": {
+        "type": "question",
+        "subject": "Тест",
+        "message": "Коротко"
+      },
+      "expectedStatus": 400
+    },
+    {
+      "name": "reject invalid feedback type",
+      "method": "POST",
+      "path": "/?resource=feedback",
+      "body": {
+        "type": "unknown",
+        "subject": "Тест",
+        "message": "Это сообщение содержит более двадцати символов текста."
+      },
+      "expectedStatus": 400
+    },
+    {
+      "name": "list feedback",
+      "method": "GET",
+      "path": "/?resource=feedback",
+      "expectedStatus": 200,
+      "expectedBody": {"ok": true},
+      "bodyMatcher": "partial"
     }
   ]
 }

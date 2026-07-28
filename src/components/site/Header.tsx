@@ -7,6 +7,7 @@ const NAV = [
   { label: 'Что вы получаете', href: '#features' },
   { label: 'Защита данных', href: '#security' },
   { label: 'Стоимость', href: '#pricing' },
+  { label: 'Вопросы', href: '#feedback' },
 ];
 
 const Header = () => {
