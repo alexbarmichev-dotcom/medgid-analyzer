@@ -49,7 +49,7 @@ const Header = () => {
           ))}
           <button
             onClick={() => go('#start')}
-            className="inline-flex items-center gap-2 rounded-[var(--radius)] bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
+            className="inline-flex items-center gap-2 rounded-[var(--radius)] bg-hand px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:-translate-y-0.5"
           >
             Личный кабинет
             <Icon name="ArrowRight" size={16} />
