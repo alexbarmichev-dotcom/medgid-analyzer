@@ -3,11 +3,28 @@ import ReactMarkdown from 'react-markdown';
 
 interface PayStepProps {
   analyzing: boolean;
+  checkingPayment: boolean;
   onPay: () => void;
   onBack: () => void;
 }
 
-export const PayStep = ({ analyzing, onPay, onBack }: PayStepProps) => {
+export const PayStep = ({ analyzing, checkingPayment, onPay, onBack }: PayStepProps) => {
+  if (checkingPayment) {
+    return (
+      <div className="animate-fade-in space-y-6 py-6 text-center">
+        <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-hand/12 text-hand">
+          <Icon name="Loader2" size={26} className="animate-spin" />
+        </span>
+        <div>
+          <h3 className="font-head text-xl font-bold">Проверяем оплату…</h3>
+          <p className="mt-2 text-ink-soft">
+            Если вы уже оплатили в ЮKassa — подождите, обычно это занимает несколько секунд.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="animate-fade-in space-y-6 text-center">
       <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-hand/12 text-hand">
@@ -16,8 +33,8 @@ export const PayStep = ({ analyzing, onPay, onBack }: PayStepProps) => {
       <div>
         <h3 className="font-head text-xl font-bold">Всё готово к разбору</h3>
         <p className="mt-2 text-ink-soft">
-          Стоимость одного запроса — <b>190&nbsp;₽</b>. Запрос уйдёт в нейросеть после
-          подтверждения оплаты.
+          Стоимость одного запроса — <b>190&nbsp;₽</b>. Вы перейдёте на защищённую страницу
+          оплаты ЮKassa, а расшифровка начнётся сразу после подтверждения оплаты.
         </p>
       </div>
       <button
@@ -25,7 +42,7 @@ export const PayStep = ({ analyzing, onPay, onBack }: PayStepProps) => {
         disabled={analyzing}
         className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius)] bg-accent px-6 py-4 text-base font-semibold text-accent-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-60"
       >
-        {analyzing ? 'Разбираем анализ…' : 'Оплатить 190 ₽'}
+        {analyzing ? 'Готовим оплату…' : 'Оплатить 190 ₽'}
         {!analyzing && <Icon name="CreditCard" size={18} />}
       </button>
       <button
@@ -35,6 +52,10 @@ export const PayStep = ({ analyzing, onPay, onBack }: PayStepProps) => {
       >
         Вернуться к данным
       </button>
+      <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Icon name="ShieldCheck" size={14} />
+        Оплата проходит через ЮKassa, данные карты нам не передаются
+      </p>
     </div>
   );
 };

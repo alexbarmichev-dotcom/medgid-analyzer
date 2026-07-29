@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { toast } from '@/hooks/use-toast';
 import AuthStep, { LOGIN_RE } from '@/components/site/start-flow/AuthStep';
@@ -9,6 +9,9 @@ import HistoryDialog, { HistoryItem } from '@/components/site/start-flow/History
 const AUTH_URL = 'https://functions.poehali.dev/8c1cf8ce-6c17-461b-aec5-95a01638aefa';
 const ANALYZE_URL = 'https://functions.poehali.dev/b4dfdccf-8880-4501-b296-550516223859';
 const HISTORY_URL = 'https://functions.poehali.dev/c6e19e20-72b0-4a41-b317-8eb65ffd4dce';
+
+const POLL_INTERVAL_MS = 3000;
+const POLL_MAX_ATTEMPTS = 40; // ~2 минуты
 
 type Step = 'auth' | 'form' | 'pay' | 'done';
 
@@ -93,11 +96,13 @@ const StartFlow = () => {
   const [meds, setMeds] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
+  const [checkingPayment, setCheckingPayment] = useState(false);
   const [aiResult, setAiResult] = useState('');
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [isFree, setIsFree] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loginValid = LOGIN_RE.test(login.trim());
 
@@ -116,6 +121,84 @@ const StartFlow = () => {
       /* тихо игнорируем — история не критична для основного сценария */
     } finally {
       setHistoryLoading(false);
+    }
+  };
+
+  // восстановление после возврата с оплаты ЮKassa
+  useEffect(() => {
+    let paymentId: string | null = null;
+    try {
+      paymentId = sessionStorage.getItem('medgid_pending_payment');
+      sessionStorage.removeItem('medgid_pending_payment');
+    } catch {
+      /* ignore */
+    }
+    if (!paymentId) return;
+
+    const token = localStorage.getItem('medgid_token');
+    if (!token) return;
+
+    setStep('pay');
+    pollPayment(paymentId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearTimeout(pollRef.current);
+    };
+  }, []);
+
+  const pollPayment = (paymentId: string, attempt = 0) => {
+    setCheckingPayment(true);
+    checkPayment(paymentId, attempt);
+  };
+
+  const checkPayment = async (paymentId: string, attempt: number) => {
+    try {
+      const token = localStorage.getItem('medgid_token') || '';
+      const res = await fetch(`${ANALYZE_URL}?action=check_payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Authorization': token },
+        body: JSON.stringify({ paymentId }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setCheckingPayment(false);
+        toast({ title: data.error || 'Не удалось проверить оплату' });
+        return;
+      }
+
+      if (data.status === 'done') {
+        setCheckingPayment(false);
+        setAiResult(data.result || '');
+        toast({ title: 'Оплата прошла', description: 'Расшифровка готова' });
+        setStep('done');
+        loadHistory();
+        return;
+      }
+
+      if (data.status === 'canceled') {
+        setCheckingPayment(false);
+        toast({ title: 'Оплата отменена', description: 'Попробуйте оплатить ещё раз' });
+        return;
+      }
+
+      // pending — продолжаем опрос
+      if (attempt + 1 >= POLL_MAX_ATTEMPTS) {
+        setCheckingPayment(false);
+        toast({
+          title: 'Оплата ещё не подтверждена',
+          description: 'Если вы оплатили — подождите немного и нажмите «Оплатить» снова',
+        });
+        return;
+      }
+
+      pollRef.current = setTimeout(() => checkPayment(paymentId, attempt + 1), POLL_INTERVAL_MS);
+    } catch {
+      setCheckingPayment(false);
+      toast({ title: 'Ошибка сети при проверке оплаты' });
     }
   };
 
@@ -167,19 +250,19 @@ const StartFlow = () => {
       return;
     }
     if (isFree) {
-      onPay();
+      onFreeAnalyze();
       return;
     }
     setStep('pay');
   };
 
-  const onPay = async () => {
+  const onFreeAnalyze = async () => {
     setAnalyzing(true);
     try {
       const compressed = await Promise.all(files.map(compressImage));
       const uploaded = await Promise.all(compressed.map(readAsBase64));
       const token = localStorage.getItem('medgid_token') || '';
-      const res = await fetch(ANALYZE_URL, {
+      const res = await fetch(`${ANALYZE_URL}?action=free`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Authorization': token },
         body: JSON.stringify({ gender, age, complaints, conditions, meds, files: uploaded }),
@@ -190,9 +273,51 @@ const StartFlow = () => {
         return;
       }
       setAiResult(data.result || '');
-      toast({ title: 'Оплата пройдена', description: 'Расшифровка готова' });
+      toast({ title: 'Расшифровка готова' });
       setStep('done');
       loadHistory();
+    } catch {
+      toast({ title: 'Ошибка сети, попробуйте ещё раз' });
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const onPay = async () => {
+    setAnalyzing(true);
+    try {
+      const compressed = await Promise.all(files.map(compressImage));
+      const uploaded = await Promise.all(compressed.map(readAsBase64));
+      const token = localStorage.getItem('medgid_token') || '';
+
+      const returnUrl = new URL(window.location.href);
+      returnUrl.hash = '';
+
+      const res = await fetch(`${ANALYZE_URL}?action=create_payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Authorization': token },
+        body: JSON.stringify({
+          gender,
+          age,
+          complaints,
+          conditions,
+          meds,
+          files: uploaded,
+          returnUrl: returnUrl.toString(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: data.error || 'Не удалось создать платёж' });
+        return;
+      }
+
+      try {
+        sessionStorage.setItem('medgid_pending_payment', data.paymentId);
+      } catch {
+        /* ignore */
+      }
+      window.location.href = data.confirmationUrl;
     } catch {
       toast({ title: 'Ошибка сети, попробуйте ещё раз' });
     } finally {
@@ -312,7 +437,12 @@ const StartFlow = () => {
           )}
 
           {step === 'pay' && (
-            <PayStep analyzing={analyzing} onPay={onPay} onBack={() => setStep('form')} />
+            <PayStep
+              analyzing={analyzing}
+              checkingPayment={checkingPayment}
+              onPay={onPay}
+              onBack={() => setStep('form')}
+            />
           )}
 
           {step === 'done' && (
