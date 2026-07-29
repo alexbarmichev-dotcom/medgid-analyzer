@@ -37,7 +37,7 @@ const Pricing = () => {
                 Один разбор анализа
               </p>
               <div className="mt-4 flex items-baseline gap-2">
-                <span className="font-head text-6xl font-extrabold tracking-[-0.03em]">250</span>
+                <span className="font-head text-6xl font-extrabold tracking-[-0.03em]">190</span>
                 <span className="font-head text-3xl font-bold">₽</span>
               </div>
               <p className="mt-3 text-accent-foreground/85">

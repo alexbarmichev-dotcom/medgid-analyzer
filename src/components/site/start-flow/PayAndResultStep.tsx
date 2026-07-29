@@ -16,7 +16,7 @@ export const PayStep = ({ analyzing, onPay, onBack }: PayStepProps) => {
       <div>
         <h3 className="font-head text-xl font-bold">Всё готово к разбору</h3>
         <p className="mt-2 text-ink-soft">
-          Стоимость одного запроса — <b>250&nbsp;₽</b>. Запрос уйдёт в нейросеть после
+          Стоимость одного запроса — <b>190&nbsp;₽</b>. Запрос уйдёт в нейросеть после
           подтверждения оплаты.
         </p>
       </div>
@@ -25,7 +25,7 @@ export const PayStep = ({ analyzing, onPay, onBack }: PayStepProps) => {
         disabled={analyzing}
         className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius)] bg-accent px-6 py-4 text-base font-semibold text-accent-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-60"
       >
-        {analyzing ? 'Разбираем анализ…' : 'Оплатить 250 ₽'}
+        {analyzing ? 'Разбираем анализ…' : 'Оплатить 190 ₽'}
         {!analyzing && <Icon name="CreditCard" size={18} />}
       </button>
       <button

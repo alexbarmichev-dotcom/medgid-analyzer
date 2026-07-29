@@ -48,7 +48,7 @@ const Hero = () => {
               <Icon name="ArrowRight" size={18} />
             </button>
             <p className="max-w-[16ch] text-sm leading-snug text-muted-foreground">
-              Разбор одного анализа&nbsp;— 250&nbsp;₽
+              Разбор одного анализа&nbsp;— 190&nbsp;₽
             </p>
           </div>
         </div>
