@@ -167,7 +167,7 @@ def _is_user_free(dsn: str, login: str) -> bool:
 def _yookassa_auth_header() -> str:
     shop_id = os.environ["YOOKASSA_SHOP_ID"]
     secret_key = os.environ["YOOKASSA_SECRET_KEY"]
-    token = base64.b64encode(f"{shop_id}:{secret_key}".encode()).decode()
+    token = base64.b64encode(f"{shop_id.strip()}:{secret_key.strip()}".encode()).decode()
     return f"Basic {token}"
 
 
