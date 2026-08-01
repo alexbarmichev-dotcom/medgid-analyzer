@@ -21,7 +21,7 @@ def _resp(status: int, body: Dict[str, Any]) -> Dict[str, Any]:
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, X-Authorization",
+            "Access-Control-Allow-Headers": "Content-Type, X-Authorization, X-Admin-Password",
         },
         "isBase64Encoded": False,
         "body": json.dumps(body, default=str),
@@ -165,6 +165,86 @@ def _update_feedback_status(dsn: str, item_id: int, status: str) -> bool:
         conn.close()
 
 
+def _check_admin_auth(event: Dict[str, Any]) -> bool:
+    headers = event.get("headers") or {}
+    provided = headers.get("X-Admin-Password") or headers.get("x-admin-password") or ""
+    expected = os.environ.get("ADMIN_PASSWORD", "")
+    return bool(expected) and provided == expected
+
+
+def _list_admin_payments(dsn: str) -> List[Dict[str, Any]]:
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT id, login, email, gender, age, payment_id, payment_status, "
+                "amount, status, created_at FROM analyses ORDER BY created_at DESC LIMIT 500"
+            )
+            rows = cur.fetchall()
+    finally:
+        conn.close()
+    return [
+        {
+            "id": r["id"],
+            "login": r["login"],
+            "email": r["email"],
+            "gender": r["gender"],
+            "age": r["age"],
+            "paymentId": r["payment_id"],
+            "paymentStatus": r["payment_status"],
+            "amount": r["amount"],
+            "status": r["status"],
+            "createdAt": r["created_at"].isoformat() if r["created_at"] else None,
+        }
+        for r in rows
+    ]
+
+
+def _list_admin_users(dsn: str) -> List[Dict[str, Any]]:
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT u.id, u.login, u.phone, u.is_free, u.created_at, "
+                "COUNT(a.id) AS analyses_count, "
+                "COALESCE(SUM(CASE WHEN a.payment_status = 'paid' THEN a.amount ELSE 0 END), 0) AS total_paid "
+                "FROM users u LEFT JOIN analyses a ON a.login = u.login "
+                "GROUP BY u.id ORDER BY u.created_at DESC LIMIT 500"
+            )
+            rows = cur.fetchall()
+    finally:
+        conn.close()
+    return [
+        {
+            "id": r["id"],
+            "login": r["login"],
+            "phone": r["phone"],
+            "isFree": r["is_free"],
+            "createdAt": r["created_at"].isoformat() if r["created_at"] else None,
+            "analysesCount": r["analyses_count"],
+            "totalPaid": str(r["total_paid"]),
+        }
+        for r in rows
+    ]
+
+
+def _handle_admin(event: Dict[str, Any]) -> Dict[str, Any]:
+    if not _check_admin_auth(event):
+        return _resp(401, {"error": "Неверный пароль администратора"})
+
+    dsn = os.environ["DATABASE_URL"]
+    params = event.get("queryStringParameters") or {}
+    admin_resource = params.get("admin", "payments")
+
+    if admin_resource == "payments":
+        return _resp(200, {"ok": True, "items": _list_admin_payments(dsn)})
+
+    if admin_resource == "users":
+        return _resp(200, {"ok": True, "items": _list_admin_users(dsn)})
+
+    return _resp(400, {"error": "Неизвестный ресурс"})
+
+
 def _handle_feedback(event: Dict[str, Any]) -> Dict[str, Any]:
     method = event.get("httpMethod", "GET")
     dsn = os.environ["DATABASE_URL"]
@@ -231,13 +311,15 @@ def _handle_feedback(event: Dict[str, Any]) -> Dict[str, Any]:
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Business: возвращает историю запросов пользователя (расшифровок анализов) личного
-    кабинета МедГид, а также принимает и отдаёт обращения пользователей в разделе
-    "Вопросы по работе приложения" (resource=feedback).
-    Args: event с httpMethod, queryStringParameters {resource: 'feedback', type, status, id},
-          headers.X-Authorization (токен логина) для истории,
+    кабинета МедГид, принимает и отдаёт обращения пользователей (resource=feedback),
+    а также отдаёт закрытую админ-панель со списком платежей и пользователей
+    (resource=admin, admin=payments|users) по паролю в заголовке X-Admin-Password.
+    Args: event с httpMethod, queryStringParameters {resource: 'feedback'|'admin', type,
+          status, id, admin}, headers.X-Authorization (токен логина) для истории,
+          headers.X-Admin-Password для админ-панели,
           body {type, subject, message, screenshot} для создания обращения,
           body {status} для обновления статуса обращения администратором
-    Returns: HTTP-ответ со списком истории анализов или данными обращений обратной связи
+    Returns: HTTP-ответ со списком истории анализов, обращений или платежей/пользователей
     """
     method = event.get("httpMethod", "GET")
     if method == "OPTIONS":
@@ -246,5 +328,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     params = event.get("queryStringParameters") or {}
     if params.get("resource") == "feedback":
         return _handle_feedback(event)
+    if params.get("resource") == "admin":
+        return _handle_admin(event)
 
     return _handle_history(event)

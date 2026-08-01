@@ -7,25 +7,25 @@
       "expectedStatus": 200
     },
     {
-      "name": "bad login format",
+      "name": "bad phone format on send_code",
       "method": "POST",
       "path": "/",
-      "body": {"action": "register", "login": "abc"},
+      "body": {"action": "send_code", "phone": "123"},
       "expectedStatus": 400
     },
     {
-      "name": "register existing login rejected",
+      "name": "verify_code without code",
       "method": "POST",
       "path": "/",
-      "body": {"action": "register", "login": "testovyi-medgid"},
-      "expectedStatus": 409
+      "body": {"action": "verify_code", "phone": "79991234567"},
+      "expectedStatus": 400
     },
     {
-      "name": "login not found",
+      "name": "unknown action",
       "method": "POST",
       "path": "/",
-      "body": {"action": "login", "login": "nikogda-nesuschestvuet"},
-      "expectedStatus": 404
+      "body": {"action": "unknown"},
+      "expectedStatus": 400
     }
   ]
 }

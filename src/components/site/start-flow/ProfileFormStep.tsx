@@ -15,6 +15,8 @@ interface ProfileFormStepProps {
   setConditions: (conditions: string) => void;
   meds: string;
   setMeds: (meds: string) => void;
+  email: string;
+  setEmail: (email: string) => void;
   files: File[];
   addFiles: (list: FileList | null) => void;
   analyzing: boolean;
@@ -34,6 +36,8 @@ const ProfileFormStep = ({
   setConditions,
   meds,
   setMeds,
+  email,
+  setEmail,
   files,
   addFiles,
   analyzing,
@@ -113,6 +117,20 @@ const ProfileFormStep = ({
           value={meds}
           onChange={(e) => setMeds(e.target.value)}
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="email">Email для уведомления (необязательно)</Label>
+        <Input
+          id="email"
+          type="email"
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <p className="text-xs text-muted-foreground">
+          Пришлём результат расшифровки на почту, когда он будет готов
+        </p>
       </div>
 
       <div className="space-y-2">

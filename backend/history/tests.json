@@ -61,6 +61,19 @@
       "expectedStatus": 200,
       "expectedBody": {"ok": true},
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "admin without password",
+      "method": "GET",
+      "path": "/?resource=admin&admin=payments",
+      "expectedStatus": 401
+    },
+    {
+      "name": "admin wrong password",
+      "method": "GET",
+      "path": "/?resource=admin&admin=payments",
+      "headers": {"X-Admin-Password": "wrong-password-xyz"},
+      "expectedStatus": 401
     }
   ]
 }

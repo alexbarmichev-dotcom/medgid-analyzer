@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { toast } from '@/hooks/use-toast';
-import AuthStep, { LOGIN_RE } from '@/components/site/start-flow/AuthStep';
+import AuthStep, { PHONE_RE } from '@/components/site/start-flow/AuthStep';
 import ProfileFormStep from '@/components/site/start-flow/ProfileFormStep';
 import { PayStep, DoneStep } from '@/components/site/start-flow/PayAndResultStep';
 import HistoryDialog, { HistoryItem } from '@/components/site/start-flow/HistoryDialog';
@@ -85,15 +85,18 @@ const compressImage = (file: File): Promise<File> =>
 
 const StartFlow = () => {
   const [step, setStep] = useState<Step>('auth');
-  const [authMode, setAuthMode] = useState<'register' | 'login'>('register');
-  const [login, setLogin] = useState('');
+  const [phone, setPhone] = useState('');
+  const [code, setCode] = useState('');
+  const [codeSent, setCodeSent] = useState(false);
   const [consent, setConsent] = useState(false);
-  const [entering, setEntering] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [gender, setGender] = useState<'m' | 'f' | ''>('');
   const [age, setAge] = useState('');
   const [complaints, setComplaints] = useState('');
   const [conditions, setConditions] = useState('');
   const [meds, setMeds] = useState('');
+  const [email, setEmail] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(false);
@@ -104,7 +107,7 @@ const StartFlow = () => {
   const [isFree, setIsFree] = useState(false);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loginValid = LOGIN_RE.test(login.trim());
+  const phoneValid = PHONE_RE.test(phone.trim());
 
   const loadHistory = async () => {
     setHistoryLoading(true);
@@ -202,25 +205,69 @@ const StartFlow = () => {
     }
   };
 
-  const enter = async () => {
-    if (!loginValid) {
-      toast({ title: 'Логин должен состоять из двух слов через дефис, например yasnyi-rassvet' });
+  const sendCode = async () => {
+    if (!phoneValid) {
+      toast({ title: 'Введите корректный номер телефона' });
       return;
     }
-    if (authMode === 'register' && !consent) {
+    if (!consent) {
       toast({ title: 'Нужно согласие на обработку персональных данных' });
       return;
     }
-    setEntering(true);
+    setSendingCode(true);
     try {
       const res = await fetch(AUTH_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: authMode, login: login.trim() }),
+        body: JSON.stringify({ action: 'send_code', phone: phone.trim() }),
       });
       const data = await res.json();
       if (!res.ok) {
-        toast({ title: data.error || 'Не удалось выполнить запрос' });
+        toast({ title: data.error || 'Не удалось отправить код' });
+        return;
+      }
+      setCodeSent(true);
+      toast({ title: 'Код отправлен', description: 'Проверьте SMS' });
+    } catch {
+      toast({ title: 'Ошибка сети, попробуйте ещё раз' });
+    } finally {
+      setSendingCode(false);
+    }
+  };
+
+  const resendCode = async () => {
+    try {
+      const res = await fetch(AUTH_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send_code', phone: phone.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: data.error || 'Не удалось отправить код' });
+        return;
+      }
+      toast({ title: 'Код отправлен повторно' });
+    } catch {
+      toast({ title: 'Ошибка сети, попробуйте ещё раз' });
+    }
+  };
+
+  const verifyCode = async () => {
+    if (code.length < 4) {
+      toast({ title: 'Введите код из SMS' });
+      return;
+    }
+    setVerifying(true);
+    try {
+      const res = await fetch(AUTH_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify_code', phone: phone.trim(), code: code.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: data.error || 'Не удалось выполнить вход' });
         return;
       }
       try {
@@ -236,7 +283,7 @@ const StartFlow = () => {
     } catch {
       toast({ title: 'Ошибка сети, попробуйте ещё раз' });
     } finally {
-      setEntering(false);
+      setVerifying(false);
     }
   };
 
@@ -265,7 +312,7 @@ const StartFlow = () => {
       const res = await fetch(`${ANALYZE_URL}?action=free`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Authorization': token },
-        body: JSON.stringify({ gender, age, complaints, conditions, meds, files: uploaded }),
+        body: JSON.stringify({ gender, age, complaints, conditions, meds, email, files: uploaded }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -302,6 +349,7 @@ const StartFlow = () => {
           complaints,
           conditions,
           meds,
+          email,
           files: uploaded,
           returnUrl: returnUrl.toString(),
         }),
@@ -337,14 +385,16 @@ const StartFlow = () => {
 
   const reset = () => {
     setStep('auth');
-    setAuthMode('register');
-    setLogin('');
+    setPhone('');
+    setCode('');
+    setCodeSent(false);
     setConsent(false);
     setGender('');
     setAge('');
     setComplaints('');
     setConditions('');
     setMeds('');
+    setEmail('');
     setFiles([]);
     setAiResult('');
     setHistory([]);
@@ -403,15 +453,19 @@ const StartFlow = () => {
         <div className="rounded-3xl border border-border bg-card p-6 shadow-[0_26px_50px_-40px_rgba(28,27,24,0.5)] md:p-9">
           {step === 'auth' && (
             <AuthStep
-              authMode={authMode}
-              setAuthMode={setAuthMode}
-              login={login}
-              setLogin={setLogin}
+              phone={phone}
+              setPhone={setPhone}
+              code={code}
+              setCode={setCode}
+              codeSent={codeSent}
               consent={consent}
               setConsent={setConsent}
-              entering={entering}
-              loginValid={loginValid}
-              enter={enter}
+              sendingCode={sendingCode}
+              verifying={verifying}
+              phoneValid={phoneValid}
+              sendCode={sendCode}
+              verifyCode={verifyCode}
+              resendCode={resendCode}
             />
           )}
 
@@ -428,6 +482,8 @@ const StartFlow = () => {
               setConditions={setConditions}
               meds={meds}
               setMeds={setMeds}
+              email={email}
+              setEmail={setEmail}
               files={files}
               addFiles={addFiles}
               analyzing={analyzing}

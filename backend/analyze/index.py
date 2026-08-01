@@ -17,6 +17,9 @@ POLZA_MODEL = "anthropic/claude-sonnet-5"
 YOOKASSA_API = "https://api.yookassa.ru/v3"
 PRICE_RUB = "190.00"
 
+RESEND_API = "https://api.resend.com/emails"
+EMAIL_FROM = "МедГид <onboarding@resend.dev>"
+
 SYSTEM_PROMPT = (
     "Ты врач терапевт со стажем работы 35 лет. Посмотри присланные тебе анализы биохимических "
     "исследований, возраст, пол, недомогания пациента и объясни значение теста, укажи, насколько "
@@ -132,17 +135,18 @@ def _call_ai(uploaded: List[Dict[str, str]], gender: str, age: str, complaints: 
 
 def _save_analysis(dsn: str, login: str, gender: str, age: Optional[int], complaints: str,
                     conditions: str, meds: str, file_urls: List[str], ai_result: str,
-                    payment_id: Optional[str], payment_status: str, amount: str) -> int:
+                    payment_id: Optional[str], payment_status: str, amount: str,
+                    email: Optional[str] = None) -> int:
     conn = psycopg2.connect(dsn)
     try:
         with conn.cursor() as cur:
             sql = (
                 "INSERT INTO analyses (login, gender, age, complaints, conditions, meds, "
-                "file_urls, ai_result, status, payment_id, payment_status, amount) VALUES ("
+                "file_urls, ai_result, status, payment_id, payment_status, amount, email) VALUES ("
                 f"{_esc(login)}, {_esc(gender)}, {age if age is not None else 'NULL'}, "
                 f"{_esc(complaints)}, {_esc(conditions)}, {_esc(meds)}, "
                 f"{_esc(json.dumps(file_urls))}::jsonb, {_esc(ai_result)}, 'done', "
-                f"{_esc(payment_id)}, {_esc(payment_status)}, {amount}"
+                f"{_esc(payment_id)}, {_esc(payment_status)}, {amount}, {_esc(email)}"
                 ") RETURNING id"
             )
             cur.execute(sql)
@@ -151,6 +155,34 @@ def _save_analysis(dsn: str, login: str, gender: str, age: Optional[int], compla
         return new_id
     finally:
         conn.close()
+
+
+def _send_result_email(email: str, ai_result: str) -> None:
+    api_key = os.environ.get("RESEND_API_KEY")
+    if not api_key:
+        return
+    html = (
+        "<h2>Ваша расшифровка анализа готова</h2>"
+        "<p>Результат также доступен в личном кабинете МедГид.</p>"
+        f"<div style='white-space:pre-wrap'>{ai_result[:5000]}</div>"
+    )
+    payload = {
+        "from": EMAIL_FROM,
+        "to": [email],
+        "subject": "МедГид — расшифровка анализа готова",
+        "html": html,
+    }
+    req = urllib.request.Request(
+        RESEND_API,
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as res:
+            res.read()
+    except Exception:
+        pass
 
 
 def _is_user_free(dsn: str, login: str) -> bool:
@@ -220,6 +252,7 @@ def _handle_create_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
     complaints = body.get("complaints", "")
     conditions = body.get("conditions", "")
     meds = body.get("meds", "")
+    email = (body.get("email") or "").strip() or None
     files = body.get("files") or []
     return_url = body.get("returnUrl") or "https://poehali.dev"
 
@@ -249,10 +282,11 @@ def _handle_create_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
         with conn.cursor() as cur:
             sql = (
                 "INSERT INTO pending_analyses (payment_id, login, gender, age, complaints, "
-                "conditions, meds, files, amount, status) VALUES ("
+                "conditions, meds, files, amount, status, email) VALUES ("
                 f"{_esc(payment_id)}, {_esc(login)}, {_esc(gender)}, "
                 f"{age if age is not None else 'NULL'}, {_esc(complaints)}, {_esc(conditions)}, "
-                f"{_esc(meds)}, {_esc(json.dumps(uploaded))}::jsonb, {PRICE_RUB}, 'pending')"
+                f"{_esc(meds)}, {_esc(json.dumps(uploaded))}::jsonb, {PRICE_RUB}, 'pending', "
+                f"{_esc(email)})"
             )
             cur.execute(sql)
         conn.commit()
@@ -286,7 +320,7 @@ def _handle_check_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
                 return _resp(200, {"ok": True, "status": "done", "id": done_row[0], "result": done_row[1]})
 
             cur.execute(
-                "SELECT login, gender, age, complaints, conditions, meds, files, status "
+                "SELECT login, gender, age, complaints, conditions, meds, files, status, email "
                 f"FROM pending_analyses WHERE payment_id = {_esc(payment_id)}"
             )
             pending = cur.fetchone()
@@ -296,7 +330,7 @@ def _handle_check_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
     if not pending:
         return _resp(404, {"error": "Платёж не найден"})
 
-    p_login, gender, age, complaints, conditions, meds, files_json, p_status = pending
+    p_login, gender, age, complaints, conditions, meds, files_json, p_status, email = pending
     if p_login != login:
         return _resp(403, {"error": "Нет доступа к этому платежу"})
 
@@ -319,9 +353,11 @@ def _handle_check_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
 
         analysis_id = _save_analysis(
             dsn, login, gender, age, complaints, conditions, meds,
-            [f["url"] for f in uploaded], ai_result, payment_id, "paid", PRICE_RUB,
+            [f["url"] for f in uploaded], ai_result, payment_id, "paid", PRICE_RUB, email,
         )
         _mark_pending(dsn, payment_id, "done")
+        if email:
+            _send_result_email(email, ai_result)
         return _resp(200, {"ok": True, "status": "done", "id": analysis_id, "result": ai_result})
 
     if yk_status == "canceled":
@@ -342,6 +378,7 @@ def _handle_free_analysis(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
     complaints = body.get("complaints", "")
     conditions = body.get("conditions", "")
     meds = body.get("meds", "")
+    email = (body.get("email") or "").strip() or None
     files = body.get("files") or []
 
     if not files:
@@ -364,10 +401,13 @@ def _handle_free_analysis(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
     try:
         analysis_id = _save_analysis(
             dsn, login, gender, age, complaints, conditions, meds,
-            [f["url"] for f in uploaded], ai_result, None, "free", "0.00",
+            [f["url"] for f in uploaded], ai_result, None, "free", "0.00", email,
         )
     except Exception:
         analysis_id = None
+
+    if email:
+        _send_result_email(email, ai_result)
 
     return _resp(200, {"ok": True, "id": analysis_id, "result": ai_result})
 
