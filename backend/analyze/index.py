@@ -4,8 +4,11 @@ import hmac
 import hashlib
 import base64
 import uuid
+import smtplib
 import urllib.request
 import urllib.error
+from email.mime.text import MIMEText
+from email.header import Header
 from typing import Dict, Any, List, Optional
 
 import boto3
@@ -17,8 +20,8 @@ POLZA_MODEL = "anthropic/claude-sonnet-5"
 YOOKASSA_API = "https://api.yookassa.ru/v3"
 PRICE_RUB = "190.00"
 
-RESEND_API = "https://api.resend.com/emails"
-EMAIL_FROM = "МедГид <onboarding@resend.dev>"
+SMTP_HOST = "smtp.mail.ru"
+SMTP_PORT = 465
 
 SYSTEM_PROMPT = (
     "Ты врач терапевт со стажем работы 35 лет. Посмотри присланные тебе анализы биохимических "
@@ -158,29 +161,25 @@ def _save_analysis(dsn: str, login: str, gender: str, age: Optional[int], compla
 
 
 def _send_result_email(email: str, ai_result: str) -> None:
-    api_key = os.environ.get("RESEND_API_KEY")
-    if not api_key:
+    smtp_login = os.environ.get("MAILRU_SMTP_LOGIN")
+    smtp_password = os.environ.get("MAILRU_SMTP_PASSWORD")
+    if not smtp_login or not smtp_password:
         return
+
     html = (
         "<h2>Ваша расшифровка анализа готова</h2>"
         "<p>Результат также доступен в личном кабинете МедГид.</p>"
         f"<div style='white-space:pre-wrap'>{ai_result[:5000]}</div>"
     )
-    payload = {
-        "from": EMAIL_FROM,
-        "to": [email],
-        "subject": "МедГид — расшифровка анализа готова",
-        "html": html,
-    }
-    req = urllib.request.Request(
-        RESEND_API,
-        data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
-        method="POST",
-    )
+    msg = MIMEText(html, "html", "utf-8")
+    msg["Subject"] = Header("МедГид — расшифровка анализа готова", "utf-8")
+    msg["From"] = smtp_login
+    msg["To"] = email
+
     try:
-        with urllib.request.urlopen(req, timeout=15) as res:
-            res.read()
+        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+            server.login(smtp_login, smtp_password)
+            server.sendmail(smtp_login, [email], msg.as_string())
     except Exception:
         pass
 
