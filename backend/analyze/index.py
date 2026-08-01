@@ -180,8 +180,9 @@ def _send_result_email(email: str, ai_result: str) -> None:
         with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=15) as server:
             server.login(smtp_login, smtp_password)
             server.sendmail(smtp_login, [email], msg.as_string())
-    except Exception:
-        pass
+        print(f"email sent to {email}")
+    except Exception as e:
+        print(f"email send failed for {email}: {e}")
 
 
 def _is_user_free(dsn: str, login: str) -> bool:
