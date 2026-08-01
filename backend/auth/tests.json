@@ -7,17 +7,17 @@
       "expectedStatus": 200
     },
     {
-      "name": "bad phone format on send_code",
+      "name": "bad email format on send_code",
       "method": "POST",
       "path": "/",
-      "body": {"action": "send_code", "phone": "123"},
+      "body": {"action": "send_code", "email": "not-an-email"},
       "expectedStatus": 400
     },
     {
       "name": "verify_code without code",
       "method": "POST",
       "path": "/",
-      "body": {"action": "verify_code", "phone": "79991234567"},
+      "body": {"action": "verify_code", "email": "test@example.com"},
       "expectedStatus": 400
     },
     {

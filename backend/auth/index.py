@@ -6,25 +6,24 @@ import random
 import hmac
 import hashlib
 import base64
-import urllib.request
-import urllib.parse
+import smtplib
+from email.mime.text import MIMEText
+from email.header import Header
 from typing import Dict, Any, Optional
 
 import psycopg2
 
-PHONE_RE = re.compile(r"^7\d{10}$")
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 CODE_TTL_SECONDS = 600
 RESEND_COOLDOWN_SECONDS = 60
 MAX_ATTEMPTS = 5
 
+SMTP_HOST = "smtp.mail.ru"
+SMTP_PORT = 465
 
-def _normalize_phone(raw: str) -> str:
-    digits = re.sub(r"\D", "", raw or "")
-    if len(digits) == 11 and digits.startswith("8"):
-        digits = "7" + digits[1:]
-    if len(digits) == 10:
-        digits = "7" + digits
-    return digits
+
+def _normalize_email(raw: str) -> str:
+    return (raw or "").strip().lower()[:255]
 
 
 def _sign_token(login: str, secret: str) -> str:
@@ -52,36 +51,36 @@ def _esc(v: Optional[str]) -> str:
     return "'" + v.replace("'", "''") + "'" if v is not None else "NULL"
 
 
-def _send_sms(phone: str, code: str) -> None:
-    api_id = os.environ["SMSRU_API_ID"]
-    params = urllib.parse.urlencode({
-        "api_id": api_id,
-        "to": phone,
-        "msg": f"Код входа МедГид: {code}",
-        "json": "1",
-    })
-    req = urllib.request.Request(f"https://sms.ru/sms/send?{params}", method="GET")
-    with urllib.request.urlopen(req, timeout=15) as res:
-        data = json.loads(res.read().decode())
-    print(f"sms.ru response for {phone}: {data}")
-    if data.get("status") != "OK":
-        raise RuntimeError(f"sms.ru error: {data}")
-    sms_block = (data.get("sms") or {}).get(phone) or {}
-    if sms_block.get("status") != "OK":
-        raise RuntimeError(f"sms.ru delivery error for {phone}: {sms_block}")
+def _send_email_code(email: str, code: str) -> None:
+    smtp_login = os.environ["MAILRU_SMTP_LOGIN"]
+    smtp_password = os.environ["MAILRU_SMTP_PASSWORD"]
+
+    html = (
+        "<h2>Код входа в МедГид</h2>"
+        f"<p style='font-size:28px;font-weight:700;letter-spacing:4px'>{code}</p>"
+        "<p>Код действителен 10 минут. Если вы не запрашивали вход — проигнорируйте письмо.</p>"
+    )
+    msg = MIMEText(html, "html", "utf-8")
+    msg["Subject"] = Header("МедГид — код для входа", "utf-8")
+    msg["From"] = smtp_login
+    msg["To"] = email
+
+    with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+        server.login(smtp_login, smtp_password)
+        server.sendmail(smtp_login, [email], msg.as_string())
 
 
-def _find_or_create_user(dsn: str, phone: str) -> bool:
+def _find_or_create_user(dsn: str, email: str) -> bool:
     """Возвращает is_free пользователя, создаёт при отсутствии."""
     conn = psycopg2.connect(dsn)
     try:
         with conn.cursor() as cur:
-            cur.execute(f"SELECT is_free FROM users WHERE login = {_esc(phone)}")
+            cur.execute(f"SELECT is_free FROM users WHERE login = {_esc(email)}")
             row = cur.fetchone()
             if row:
                 return bool(row[0])
             cur.execute(
-                f"INSERT INTO users (login, phone) VALUES ({_esc(phone)}, {_esc(phone)}) "
+                f"INSERT INTO users (login) VALUES ({_esc(email)}) "
                 f"ON CONFLICT (login) DO NOTHING"
             )
         conn.commit()
@@ -91,16 +90,16 @@ def _find_or_create_user(dsn: str, phone: str) -> bool:
 
 
 def _handle_send_code(dsn: str, body: Dict[str, Any]) -> Dict[str, Any]:
-    phone = _normalize_phone(body.get("phone", ""))
-    if not PHONE_RE.match(phone):
-        return _resp(400, {"error": "Введите корректный номер телефона"})
+    email = _normalize_email(body.get("email", ""))
+    if not EMAIL_RE.match(email):
+        return _resp(400, {"error": "Введите корректный email"})
 
     conn = psycopg2.connect(dsn)
     try:
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT created_at FROM sms_codes WHERE phone = "
-                f"{_esc(phone)} ORDER BY created_at DESC LIMIT 1"
+                f"{_esc(email)} ORDER BY created_at DESC LIMIT 1"
             )
             last = cur.fetchone()
             if last:
@@ -111,34 +110,34 @@ def _handle_send_code(dsn: str, body: Dict[str, Any]) -> Dict[str, Any]:
 
             code = f"{random.randint(0, 9999):04d}"
             cur.execute(
-                f"INSERT INTO sms_codes (phone, code) VALUES ({_esc(phone)}, {_esc(code)})"
+                f"INSERT INTO sms_codes (phone, code) VALUES ({_esc(email)}, {_esc(code)})"
             )
         conn.commit()
     finally:
         conn.close()
 
     try:
-        _send_sms(phone, code)
+        _send_email_code(email, code)
     except Exception:
-        return _resp(502, {"error": "Не удалось отправить SMS, попробуйте ещё раз"})
+        return _resp(502, {"error": "Не удалось отправить код на почту, попробуйте ещё раз"})
 
     return _resp(200, {"ok": True})
 
 
 def _handle_verify_code(dsn: str, body: Dict[str, Any], secret: str) -> Dict[str, Any]:
-    phone = _normalize_phone(body.get("phone", ""))
+    email = _normalize_email(body.get("email", ""))
     code = str(body.get("code", "")).strip()
-    if not PHONE_RE.match(phone):
-        return _resp(400, {"error": "Введите корректный номер телефона"})
+    if not EMAIL_RE.match(email):
+        return _resp(400, {"error": "Введите корректный email"})
     if not code:
-        return _resp(400, {"error": "Введите код из SMS"})
+        return _resp(400, {"error": "Введите код из письма"})
 
     conn = psycopg2.connect(dsn)
     try:
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT id, code, attempts, created_at FROM sms_codes WHERE phone = "
-                f"{_esc(phone)} AND used = false ORDER BY created_at DESC LIMIT 1"
+                f"{_esc(email)} AND used = false ORDER BY created_at DESC LIMIT 1"
             )
             row = cur.fetchone()
             if not row:
@@ -160,18 +159,18 @@ def _handle_verify_code(dsn: str, body: Dict[str, Any], secret: str) -> Dict[str
     finally:
         conn.close()
 
-    is_free = _find_or_create_user(dsn, phone)
-    token = _sign_token(phone, secret)
-    return _resp(200, {"ok": True, "token": token, "login": phone, "phone": phone, "isFree": is_free})
+    is_free = _find_or_create_user(dsn, email)
+    token = _sign_token(email, secret)
+    return _resp(200, {"ok": True, "token": token, "login": email, "email": email, "isFree": is_free})
 
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
-    Business: вход в личный кабинет МедГид по номеру телефона через SMS-код
-    (без пароля). send_code — генерирует и отправляет 4-значный код через SMS.ru,
-    verify_code — проверяет код и выдаёт токен сессии, создавая пользователя при
-    первом входе.
-    Args: event с httpMethod, body {action: 'send_code'|'verify_code', phone, code}
+    Business: вход в личный кабинет МедГид по email через код подтверждения
+    (без пароля). send_code — генерирует и отправляет 4-значный код на почту
+    через SMTP Mail.ru, verify_code — проверяет код и выдаёт токен сессии,
+    создавая пользователя при первом входе.
+    Args: event с httpMethod, body {action: 'send_code'|'verify_code', email, code}
     Returns: HTTP-ответ с токеном сессии либо подтверждением отправки кода
     """
     method = event.get("httpMethod", "POST")

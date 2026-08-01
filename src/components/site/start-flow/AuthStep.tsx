@@ -4,11 +4,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 
-export const PHONE_RE = /^(\+7|7|8)?\s*\(?\d{3}\)?[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}$/;
+export const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 interface AuthStepProps {
-  phone: string;
-  setPhone: (phone: string) => void;
+  email: string;
+  setEmail: (email: string) => void;
   code: string;
   setCode: (code: string) => void;
   codeSent: boolean;
@@ -16,15 +16,15 @@ interface AuthStepProps {
   setConsent: (consent: boolean) => void;
   sendingCode: boolean;
   verifying: boolean;
-  phoneValid: boolean;
+  emailValid: boolean;
   sendCode: () => void;
   verifyCode: () => void;
   resendCode: () => void;
 }
 
 const AuthStep = ({
-  phone,
-  setPhone,
+  email,
+  setEmail,
   code,
   setCode,
   codeSent,
@@ -32,7 +32,7 @@ const AuthStep = ({
   setConsent,
   sendingCode,
   verifying,
-  phoneValid,
+  emailValid,
   sendCode,
   verifyCode,
   resendCode,
@@ -43,23 +43,23 @@ const AuthStep = ({
     <div className="animate-fade-in space-y-5">
       {!codeSent ? (
         <>
-          <h3 className="font-head text-xl font-bold">Вход по номеру телефона</h3>
+          <h3 className="font-head text-xl font-bold">Вход по email</h3>
           <p className="text-sm text-ink-soft">
-            Пришлём код подтверждения в SMS — регистрация и вход происходят автоматически.
+            Пришлём код подтверждения на почту — регистрация и вход происходят автоматически.
           </p>
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Номер телефона</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
-              id="phone"
-              type="tel"
-              placeholder="+7 900 123-45-67"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              id="email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendCode()}
             />
-            {phone && !phoneValid && (
-              <p className="text-xs text-destructive">Введите корректный номер телефона</p>
+            {email && !emailValid && (
+              <p className="text-xs text-destructive">Введите корректный email</p>
             )}
           </div>
 
@@ -86,9 +86,9 @@ const AuthStep = ({
         </>
       ) : (
         <>
-          <h3 className="font-head text-xl font-bold">Введите код из SMS</h3>
+          <h3 className="font-head text-xl font-bold">Введите код из письма</h3>
           <p className="text-sm text-ink-soft">
-            Код отправлен на номер <b>{phone}</b>
+            Код отправлен на почту <b>{email}</b>
           </p>
 
           <div className="space-y-2">

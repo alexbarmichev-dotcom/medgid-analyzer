@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { toast } from '@/hooks/use-toast';
-import AuthStep, { PHONE_RE } from '@/components/site/start-flow/AuthStep';
+import AuthStep, { EMAIL_RE } from '@/components/site/start-flow/AuthStep';
 import ProfileFormStep from '@/components/site/start-flow/ProfileFormStep';
 import { PayStep, DoneStep } from '@/components/site/start-flow/PayAndResultStep';
 import HistoryDialog, { HistoryItem } from '@/components/site/start-flow/HistoryDialog';
@@ -85,7 +85,7 @@ const compressImage = (file: File): Promise<File> =>
 
 const StartFlow = () => {
   const [step, setStep] = useState<Step>('auth');
-  const [phone, setPhone] = useState('');
+  const [authEmail, setAuthEmail] = useState('');
   const [code, setCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
   const [consent, setConsent] = useState(false);
@@ -107,7 +107,7 @@ const StartFlow = () => {
   const [isFree, setIsFree] = useState(false);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const phoneValid = PHONE_RE.test(phone.trim());
+  const authEmailValid = EMAIL_RE.test(authEmail.trim());
 
   const loadHistory = async () => {
     setHistoryLoading(true);
@@ -206,8 +206,8 @@ const StartFlow = () => {
   };
 
   const sendCode = async () => {
-    if (!phoneValid) {
-      toast({ title: 'Введите корректный номер телефона' });
+    if (!authEmailValid) {
+      toast({ title: 'Введите корректный email' });
       return;
     }
     if (!consent) {
@@ -219,7 +219,7 @@ const StartFlow = () => {
       const res = await fetch(AUTH_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'send_code', phone: phone.trim() }),
+        body: JSON.stringify({ action: 'send_code', email: authEmail.trim() }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -227,7 +227,7 @@ const StartFlow = () => {
         return;
       }
       setCodeSent(true);
-      toast({ title: 'Код отправлен', description: 'Проверьте SMS' });
+      toast({ title: 'Код отправлен', description: 'Проверьте почту' });
     } catch {
       toast({ title: 'Ошибка сети, попробуйте ещё раз' });
     } finally {
@@ -240,7 +240,7 @@ const StartFlow = () => {
       const res = await fetch(AUTH_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'send_code', phone: phone.trim() }),
+        body: JSON.stringify({ action: 'send_code', email: authEmail.trim() }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -255,7 +255,7 @@ const StartFlow = () => {
 
   const verifyCode = async () => {
     if (code.length < 4) {
-      toast({ title: 'Введите код из SMS' });
+      toast({ title: 'Введите код из письма' });
       return;
     }
     setVerifying(true);
@@ -263,7 +263,7 @@ const StartFlow = () => {
       const res = await fetch(AUTH_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'verify_code', phone: phone.trim(), code: code.trim() }),
+        body: JSON.stringify({ action: 'verify_code', email: authEmail.trim(), code: code.trim() }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -277,6 +277,7 @@ const StartFlow = () => {
         /* ignore storage errors */
       }
       setIsFree(Boolean(data.isFree));
+      setEmail(authEmail.trim());
       toast({ title: 'Добро пожаловать!' });
       loadHistory();
       setStep('form');
@@ -385,7 +386,7 @@ const StartFlow = () => {
 
   const reset = () => {
     setStep('auth');
-    setPhone('');
+    setAuthEmail('');
     setCode('');
     setCodeSent(false);
     setConsent(false);
@@ -453,8 +454,8 @@ const StartFlow = () => {
         <div className="rounded-3xl border border-border bg-card p-6 shadow-[0_26px_50px_-40px_rgba(28,27,24,0.5)] md:p-9">
           {step === 'auth' && (
             <AuthStep
-              phone={phone}
-              setPhone={setPhone}
+              email={authEmail}
+              setEmail={setAuthEmail}
               code={code}
               setCode={setCode}
               codeSent={codeSent}
@@ -462,7 +463,7 @@ const StartFlow = () => {
               setConsent={setConsent}
               sendingCode={sendingCode}
               verifying={verifying}
-              phoneValid={phoneValid}
+              emailValid={authEmailValid}
               sendCode={sendCode}
               verifyCode={verifyCode}
               resendCode={resendCode}
