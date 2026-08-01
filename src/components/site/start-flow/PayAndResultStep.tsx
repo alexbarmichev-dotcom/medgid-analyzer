@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import Icon from '@/components/ui/icon';
 import ReactMarkdown from 'react-markdown';
+import { downloadAnalysisPdf } from '@/lib/pdf';
 
 interface PayStepProps {
   analyzing: boolean;
@@ -67,6 +69,17 @@ interface DoneStepProps {
 }
 
 export const DoneStep = ({ aiResult, reset, openHistory }: DoneStepProps) => {
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      await downloadAnalysisPdf(aiResult, { date: new Date().toLocaleString('ru-RU') });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <div className="animate-scale-in space-y-5">
       <div className="space-y-5 text-center">
@@ -105,6 +118,16 @@ export const DoneStep = ({ aiResult, reset, openHistory }: DoneStepProps) => {
           </p>
         )}
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+          {aiResult && (
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              className="inline-flex items-center justify-center gap-2 rounded-[var(--radius)] border border-border bg-background px-6 py-3.5 text-sm font-semibold text-ink-soft disabled:opacity-60"
+            >
+              <Icon name={downloading ? 'Loader2' : 'Download'} size={16} className={downloading ? 'animate-spin' : ''} />
+              {downloading ? 'Готовим PDF…' : 'Скачать в PDF'}
+            </button>
+          )}
           <button
             onClick={reset}
             className="inline-flex items-center justify-center gap-2 rounded-[var(--radius)] border border-border bg-background px-6 py-3.5 text-sm font-semibold text-ink-soft"

@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import Icon from '@/components/ui/icon';
 import ReactMarkdown from 'react-markdown';
+import { downloadAnalysisPdf } from '@/lib/pdf';
 import {
   Accordion,
   AccordionContent,
@@ -47,6 +49,25 @@ interface HistoryDialogProps {
 }
 
 const HistoryDialog = ({ open, onOpenChange, history, historyLoading }: HistoryDialogProps) => {
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
+
+  const handleDownload = async (item: HistoryItem) => {
+    if (!item.result) return;
+    setDownloadingId(item.id);
+    try {
+      await downloadAnalysisPdf(item.result, {
+        date: formatDate(item.date),
+        gender: item.gender,
+        age: item.age,
+        complaints: item.complaints,
+        conditions: item.conditions,
+        meds: item.meds,
+      });
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto rounded-3xl">
@@ -133,6 +154,20 @@ const HistoryDialog = ({ open, onOpenChange, history, historyLoading }: HistoryD
                       </ReactMarkdown>
                     ) : (
                       <p>Результат обрабатывается</p>
+                    )}
+                    {item.result && (
+                      <button
+                        onClick={() => handleDownload(item)}
+                        disabled={downloadingId === item.id}
+                        className="mt-2 inline-flex items-center gap-2 rounded-[var(--radius)] border border-border bg-card px-4 py-2 text-sm font-semibold text-ink-soft disabled:opacity-60"
+                      >
+                        <Icon
+                          name={downloadingId === item.id ? 'Loader2' : 'Download'}
+                          size={15}
+                          className={downloadingId === item.id ? 'animate-spin' : ''}
+                        />
+                        {downloadingId === item.id ? 'Готовим PDF…' : 'Скачать в PDF'}
+                      </button>
                     )}
                   </AccordionContent>
                 </AccordionItem>
