@@ -119,12 +119,8 @@ def _handle_send_code(dsn: str, body: Dict[str, Any]) -> Dict[str, Any]:
 
     try:
         _send_sms(phone, code)
-    except Exception as e:
-        debug = os.environ.get("SMS_DEBUG") == "1"
-        msg = "Не удалось отправить SMS, попробуйте ещё раз"
-        if debug:
-            msg = f"{msg} [{e}]"
-        return _resp(502, {"error": msg})
+    except Exception:
+        return _resp(502, {"error": "Не удалось отправить SMS, попробуйте ещё раз"})
 
     return _resp(200, {"ok": True})
 
