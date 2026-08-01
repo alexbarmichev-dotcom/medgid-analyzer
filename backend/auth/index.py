@@ -63,8 +63,12 @@ def _send_sms(phone: str, code: str) -> None:
     req = urllib.request.Request(f"https://sms.ru/sms/send?{params}", method="GET")
     with urllib.request.urlopen(req, timeout=15) as res:
         data = json.loads(res.read().decode())
+    print(f"sms.ru response for {phone}: {data}")
     if data.get("status") != "OK":
         raise RuntimeError(f"sms.ru error: {data}")
+    sms_block = (data.get("sms") or {}).get(phone) or {}
+    if sms_block.get("status") != "OK":
+        raise RuntimeError(f"sms.ru delivery error for {phone}: {sms_block}")
 
 
 def _find_or_create_user(dsn: str, phone: str) -> bool:
@@ -115,8 +119,12 @@ def _handle_send_code(dsn: str, body: Dict[str, Any]) -> Dict[str, Any]:
 
     try:
         _send_sms(phone, code)
-    except Exception:
-        return _resp(502, {"error": "Не удалось отправить SMS, попробуйте ещё раз"})
+    except Exception as e:
+        debug = os.environ.get("SMS_DEBUG") == "1"
+        msg = "Не удалось отправить SMS, попробуйте ещё раз"
+        if debug:
+            msg = f"{msg} [{e}]"
+        return _resp(502, {"error": msg})
 
     return _resp(200, {"ok": True})
 
