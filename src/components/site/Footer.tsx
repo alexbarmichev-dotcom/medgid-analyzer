@@ -18,7 +18,7 @@ const Footer = () => {
           <div>
             <Logo />
             <p className="mt-5 max-w-md text-[0.95rem] leading-relaxed text-ink-soft">
-              МедГид — это новый уровень диалога между вами и вашим здоровьем. Понимайте своё тело,
+              ЛабГид — это новый уровень диалога между вами и вашим здоровьем. Понимайте своё тело,
               приходите к врачу подготовленными и следите за трендами в динамике, а не только за
               статичными цифрами.
             </p>
@@ -44,7 +44,7 @@ const Footer = () => {
         </div>
 
         <div className="mt-12 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 text-sm text-muted-foreground sm:flex-row sm:items-center">
-          <span>© {new Date().getFullYear()} МедГид. Все права защищены.</span>
+          <span>© {new Date().getFullYear()} ЛабГид. Все права защищены.</span>
           <span>Данные хранятся на серверах в России · 152-ФЗ</span>
         </div>
       </div>

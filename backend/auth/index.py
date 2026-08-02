@@ -56,12 +56,12 @@ def _send_email_code(email: str, code: str) -> None:
     smtp_password = os.environ["MAILRU_SMTP_PASSWORD"]
 
     html = (
-        "<h2>Код входа в МедГид</h2>"
+        "<h2>Код входа в ЛабГид</h2>"
         f"<p style='font-size:28px;font-weight:700;letter-spacing:4px'>{code}</p>"
         "<p>Код действителен 10 минут. Если вы не запрашивали вход — проигнорируйте письмо.</p>"
     )
     msg = MIMEText(html, "html", "utf-8")
-    msg["Subject"] = Header("МедГид — код для входа", "utf-8")
+    msg["Subject"] = Header("ЛабГид — код для входа", "utf-8")
     msg["From"] = smtp_login
     msg["To"] = email
 

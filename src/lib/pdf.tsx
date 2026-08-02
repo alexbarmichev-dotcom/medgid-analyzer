@@ -62,7 +62,7 @@ export const downloadAnalysisPdf = async (result: string, meta: AnalysisMeta = {
   await new Promise<void>((resolve) => {
     root.render(
       <div>
-        <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 4px' }}>МедГид</h1>
+        <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 4px' }}>ЛабГид</h1>
         <p style={{ fontSize: 13, color: '#6b6b63', margin: '0 0 18px' }}>
           Расшифровка анализа нейросетью
         </p>
@@ -84,7 +84,7 @@ export const downloadAnalysisPdf = async (result: string, meta: AnalysisMeta = {
         )}
         <div style={{ fontSize: 14 }}>{renderMarkdown(result)}</div>
         <p style={{ marginTop: 28, fontSize: 11, color: '#9a9890' }}>
-          МедГид не ставит диагнозы и не заменяет очную консультацию врача.
+          ЛабГид не ставит диагнозы и не заменяет очную консультацию врача.
         </p>
       </div>,
     );

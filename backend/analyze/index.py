@@ -168,11 +168,11 @@ def _send_result_email(email: str, ai_result: str) -> None:
 
     html = (
         "<h2>Ваша расшифровка анализа готова</h2>"
-        "<p>Результат также доступен в личном кабинете МедГид.</p>"
+        "<p>Результат также доступен в личном кабинете ЛабГид.</p>"
         f"<div style='white-space:pre-wrap'>{ai_result[:5000]}</div>"
     )
     msg = MIMEText(html, "html", "utf-8")
-    msg["Subject"] = Header("МедГид — расшифровка анализа готова", "utf-8")
+    msg["Subject"] = Header("ЛабГид — расшифровка анализа готова", "utf-8")
     msg["From"] = smtp_login
     msg["To"] = email
 
@@ -222,7 +222,7 @@ def _create_payment(login: str, return_url: str) -> dict:
         "amount": {"value": PRICE_RUB, "currency": "RUB"},
         "confirmation": {"type": "redirect", "return_url": return_url},
         "capture": True,
-        "description": "Разбор анализа — МедГид",
+        "description": "Разбор анализа — ЛабГид",
         "metadata": {"login": login},
     }
     return _yookassa_request("POST", "/payments", body, idempotence_key=str(uuid.uuid4()))
