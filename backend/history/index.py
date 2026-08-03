@@ -42,10 +42,6 @@ def _verify_token(token: str, secret: str) -> Optional[str]:
         return None
 
 
-def _esc(v: Optional[str]) -> str:
-    return "'" + v.replace("'", "''") + "'" if v is not None else "NULL"
-
-
 def _handle_history(event: Dict[str, Any]) -> Dict[str, Any]:
     headers = event.get("headers") or {}
     token = headers.get("X-Authorization") or headers.get("x-authorization") or ""
@@ -59,11 +55,11 @@ def _handle_history(event: Dict[str, Any]) -> Dict[str, Any]:
     conn = psycopg2.connect(os.environ["DATABASE_URL"])
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            escaped = login.replace("'", "''")
             cur.execute(
                 "SELECT id, created_at, gender, age, complaints, conditions, meds, "
                 "ai_result, status FROM analyses "
-                f"WHERE login = '{escaped}' ORDER BY created_at ASC"
+                "WHERE login = %s ORDER BY created_at ASC",
+                (login,),
             )
             rows = cur.fetchall()
     finally:
@@ -107,12 +103,11 @@ def _create_feedback(dsn: str, f_type: str, subject: str, message: str,
     conn = psycopg2.connect(dsn)
     try:
         with conn.cursor() as cur:
-            sql = (
+            cur.execute(
                 "INSERT INTO feedback (type, subject, message, screenshot_url, status) "
-                f"VALUES ({_esc(f_type)}, {_esc(subject)}, {_esc(message)}, "
-                f"{_esc(screenshot_url)}, 'new') RETURNING id"
+                "VALUES (%s, %s, %s, %s, 'new') RETURNING id",
+                (f_type, subject, message, screenshot_url),
             )
-            cur.execute(sql)
             new_id = cur.fetchone()[0]
         conn.commit()
         return new_id
@@ -125,14 +120,18 @@ def _list_feedback(dsn: str, f_type: Optional[str], status: Optional[str]) -> Li
     try:
         with conn.cursor() as cur:
             where = []
+            args: List[Any] = []
             if f_type and f_type in ALLOWED_TYPES:
-                where.append(f"type = {_esc(f_type)}")
+                where.append("type = %s")
+                args.append(f_type)
             if status and status in ALLOWED_STATUSES:
-                where.append(f"status = {_esc(status)}")
+                where.append("status = %s")
+                args.append(status)
             clause = ("WHERE " + " AND ".join(where)) if where else ""
             cur.execute(
                 "SELECT id, type, subject, message, screenshot_url, status, created_at "
-                f"FROM feedback {clause} ORDER BY created_at DESC"
+                f"FROM feedback {clause} ORDER BY created_at DESC",
+                tuple(args),
             )
             rows = cur.fetchall()
             return [
@@ -156,7 +155,8 @@ def _update_feedback_status(dsn: str, item_id: int, status: str) -> bool:
     try:
         with conn.cursor() as cur:
             cur.execute(
-                f"UPDATE feedback SET status = {_esc(status)} WHERE id = {int(item_id)}"
+                "UPDATE feedback SET status = %s WHERE id = %s",
+                (status, item_id),
             )
             updated = cur.rowcount > 0
         conn.commit()
@@ -169,7 +169,7 @@ def _check_admin_auth(event: Dict[str, Any]) -> bool:
     headers = event.get("headers") or {}
     provided = headers.get("X-Admin-Password") or headers.get("x-admin-password") or ""
     expected = os.environ.get("ADMIN_PASSWORD", "")
-    return bool(expected) and provided == expected
+    return bool(expected) and hmac.compare_digest(provided, expected)
 
 
 def _list_admin_payments(dsn: str) -> List[Dict[str, Any]]:
@@ -311,7 +311,7 @@ def _handle_feedback(event: Dict[str, Any]) -> Dict[str, Any]:
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Business: возвращает историю запросов пользователя (расшифровок анализов) личного
-    кабинета МедГид, принимает и отдаёт обращения пользователей (resource=feedback),
+    кабинета ЛабГид, принимает и отдаёт обращения пользователей (resource=feedback),
     а также отдаёт закрытую админ-панель со списком платежей и пользователей
     (resource=admin, admin=payments|users) по паролю в заголовке X-Admin-Password.
     Args: event с httpMethod, queryStringParameters {resource: 'feedback'|'admin', type,

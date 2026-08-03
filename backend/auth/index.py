@@ -47,10 +47,6 @@ def _resp(status: int, body: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _esc(v: Optional[str]) -> str:
-    return "'" + v.replace("'", "''") + "'" if v is not None else "NULL"
-
-
 def _send_email_code(email: str, code: str) -> None:
     smtp_login = os.environ["MAILRU_SMTP_LOGIN"]
     smtp_password = os.environ["MAILRU_SMTP_PASSWORD"]
@@ -75,13 +71,13 @@ def _find_or_create_user(dsn: str, email: str) -> bool:
     conn = psycopg2.connect(dsn)
     try:
         with conn.cursor() as cur:
-            cur.execute(f"SELECT is_free FROM users WHERE login = {_esc(email)}")
+            cur.execute("SELECT is_free FROM users WHERE login = %s", (email,))
             row = cur.fetchone()
             if row:
                 return bool(row[0])
             cur.execute(
-                f"INSERT INTO users (login) VALUES ({_esc(email)}) "
-                f"ON CONFLICT (login) DO NOTHING"
+                "INSERT INTO users (login) VALUES (%s) ON CONFLICT (login) DO NOTHING",
+                (email,),
             )
         conn.commit()
         return False
@@ -98,8 +94,9 @@ def _handle_send_code(dsn: str, body: Dict[str, Any]) -> Dict[str, Any]:
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT created_at FROM sms_codes WHERE phone = "
-                f"{_esc(email)} ORDER BY created_at DESC LIMIT 1"
+                "SELECT created_at FROM sms_codes WHERE phone = %s "
+                "ORDER BY created_at DESC LIMIT 1",
+                (email,),
             )
             last = cur.fetchone()
             if last:
@@ -110,7 +107,8 @@ def _handle_send_code(dsn: str, body: Dict[str, Any]) -> Dict[str, Any]:
 
             code = f"{random.randint(0, 9999):04d}"
             cur.execute(
-                f"INSERT INTO sms_codes (phone, code) VALUES ({_esc(email)}, {_esc(code)})"
+                "INSERT INTO sms_codes (phone, code) VALUES (%s, %s)",
+                (email, code),
             )
         conn.commit()
     finally:
@@ -136,8 +134,9 @@ def _handle_verify_code(dsn: str, body: Dict[str, Any], secret: str) -> Dict[str
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id, code, attempts, created_at FROM sms_codes WHERE phone = "
-                f"{_esc(email)} AND used = false ORDER BY created_at DESC LIMIT 1"
+                "SELECT id, code, attempts, created_at FROM sms_codes "
+                "WHERE phone = %s AND used = false ORDER BY created_at DESC LIMIT 1",
+                (email,),
             )
             row = cur.fetchone()
             if not row:
@@ -150,11 +149,14 @@ def _handle_verify_code(dsn: str, body: Dict[str, Any], secret: str) -> Dict[str
                 return _resp(429, {"error": "Слишком много попыток, запросите новый код"})
 
             if real_code != code:
-                cur.execute(f"UPDATE sms_codes SET attempts = attempts + 1 WHERE id = {code_id}")
+                cur.execute(
+                    "UPDATE sms_codes SET attempts = attempts + 1 WHERE id = %s",
+                    (code_id,),
+                )
                 conn.commit()
                 return _resp(400, {"error": "Неверный код"})
 
-            cur.execute(f"UPDATE sms_codes SET used = true WHERE id = {code_id}")
+            cur.execute("UPDATE sms_codes SET used = true WHERE id = %s", (code_id,))
         conn.commit()
     finally:
         conn.close()
@@ -166,7 +168,7 @@ def _handle_verify_code(dsn: str, body: Dict[str, Any], secret: str) -> Dict[str
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
-    Business: вход в личный кабинет МедГид по email через код подтверждения
+    Business: вход в личный кабинет ЛабГид по email через код подтверждения
     (без пароля). send_code — генерирует и отправляет 4-значный код на почту
     через SMTP Mail.ru, verify_code — проверяет код и выдаёт токен сессии,
     создавая пользователя при первом входе.

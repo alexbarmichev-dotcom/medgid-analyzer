@@ -68,10 +68,6 @@ def _verify_token(token: str, secret: str) -> Optional[str]:
         return None
 
 
-def _esc(v: Optional[str]) -> str:
-    return "'" + v.replace("'", "''") + "'" if v else "NULL"
-
-
 def _upload_files(files: List[Dict[str, Any]]) -> List[Dict[str, str]]:
     """Загружает base64-файлы в S3 и возвращает список {url, mime}."""
     s3 = boto3.client(
@@ -143,16 +139,15 @@ def _save_analysis(dsn: str, login: str, gender: str, age: Optional[int], compla
     conn = psycopg2.connect(dsn)
     try:
         with conn.cursor() as cur:
-            sql = (
+            cur.execute(
                 "INSERT INTO analyses (login, gender, age, complaints, conditions, meds, "
                 "file_urls, ai_result, status, payment_id, payment_status, amount, email) VALUES ("
-                f"{_esc(login)}, {_esc(gender)}, {age if age is not None else 'NULL'}, "
-                f"{_esc(complaints)}, {_esc(conditions)}, {_esc(meds)}, "
-                f"{_esc(json.dumps(file_urls))}::jsonb, {_esc(ai_result)}, 'done', "
-                f"{_esc(payment_id)}, {_esc(payment_status)}, {amount}, {_esc(email)}"
-                ") RETURNING id"
+                "%s, %s, %s, %s, %s, %s, %s::jsonb, %s, 'done', %s, %s, %s, %s) RETURNING id",
+                (
+                    login, gender, age, complaints, conditions, meds,
+                    json.dumps(file_urls), ai_result, payment_id, payment_status, amount, email,
+                ),
             )
-            cur.execute(sql)
             new_id = cur.fetchone()[0]
         conn.commit()
         return new_id
@@ -180,16 +175,15 @@ def _send_result_email(email: str, ai_result: str) -> None:
         with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=15) as server:
             server.login(smtp_login, smtp_password)
             server.sendmail(smtp_login, [email], msg.as_string())
-        print(f"email sent to {email}")
-    except Exception as e:
-        print(f"email send failed for {email}: {e}")
+    except Exception:
+        pass
 
 
 def _is_user_free(dsn: str, login: str) -> bool:
     conn = psycopg2.connect(dsn)
     try:
         with conn.cursor() as cur:
-            cur.execute(f"SELECT is_free FROM users WHERE login = {_esc(login)}")
+            cur.execute("SELECT is_free FROM users WHERE login = %s", (login,))
             row = cur.fetchone()
             return bool(row and row[0])
     finally:
@@ -237,8 +231,8 @@ def _mark_pending(dsn: str, payment_id: str, status: str) -> None:
     try:
         with conn.cursor() as cur:
             cur.execute(
-                f"UPDATE pending_analyses SET status = {_esc(status)} "
-                f"WHERE payment_id = {_esc(payment_id)}"
+                "UPDATE pending_analyses SET status = %s WHERE payment_id = %s",
+                (status, payment_id),
             )
         conn.commit()
     finally:
@@ -280,15 +274,15 @@ def _handle_create_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
     conn = psycopg2.connect(dsn)
     try:
         with conn.cursor() as cur:
-            sql = (
+            cur.execute(
                 "INSERT INTO pending_analyses (payment_id, login, gender, age, complaints, "
-                "conditions, meds, files, amount, status, email) VALUES ("
-                f"{_esc(payment_id)}, {_esc(login)}, {_esc(gender)}, "
-                f"{age if age is not None else 'NULL'}, {_esc(complaints)}, {_esc(conditions)}, "
-                f"{_esc(meds)}, {_esc(json.dumps(uploaded))}::jsonb, {PRICE_RUB}, 'pending', "
-                f"{_esc(email)})"
+                "conditions, meds, files, amount, status, email) VALUES "
+                "(%s, %s, %s, %s, %s, %s, %s::jsonb, %s, 'pending', %s)",
+                (
+                    payment_id, login, gender, age, complaints, conditions,
+                    meds, json.dumps(uploaded), PRICE_RUB, email,
+                ),
             )
-            cur.execute(sql)
         conn.commit()
     finally:
         conn.close()
@@ -312,8 +306,8 @@ def _handle_check_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
     try:
         with conn.cursor() as cur:
             cur.execute(
-                f"SELECT id, ai_result FROM analyses WHERE payment_id = {_esc(payment_id)} "
-                f"AND login = {_esc(login)}"
+                "SELECT id, ai_result FROM analyses WHERE payment_id = %s AND login = %s",
+                (payment_id, login),
             )
             done_row = cur.fetchone()
             if done_row:
@@ -321,7 +315,8 @@ def _handle_check_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
 
             cur.execute(
                 "SELECT login, gender, age, complaints, conditions, meds, files, status, email "
-                f"FROM pending_analyses WHERE payment_id = {_esc(payment_id)}"
+                "FROM pending_analyses WHERE payment_id = %s",
+                (payment_id,),
             )
             pending = cur.fetchone()
     finally:
@@ -414,7 +409,7 @@ def _handle_free_analysis(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
-    Business: обрабатывает платный разбор анализов личного кабинета МедГид через ЮKassa.
+    Business: обрабатывает платный разбор анализов личного кабинета ЛабГид через ЮKassa.
     Поддерживает три действия (?action=): create_payment — создаёт платёж на 190 руб.
     и сохраняет заявку на разбор; check_payment — проверяет статус оплаты, при успехе
     запускает ИИ-расшифровку (Claude через Polza AI) и сохраняет результат; free — прямой
