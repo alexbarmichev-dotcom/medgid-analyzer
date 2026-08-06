@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 
 const LINKS = [
+  { href: '/admin', label: 'Главная', icon: 'LayoutGrid' },
   { href: '/admin/payments', label: 'Платежи и пользователи', icon: 'CreditCard' },
   { href: '/admin/feedback', label: 'Обращения', icon: 'MessageSquare' },
   { href: '/admin/reviews', label: 'Отзывы', icon: 'Star' },
