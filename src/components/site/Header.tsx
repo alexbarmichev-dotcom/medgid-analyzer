@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import Logo from './Logo';
 
@@ -8,11 +9,14 @@ const NAV = [
   { label: 'Защита данных', href: '#security' },
   { label: 'Стоимость', href: '#pricing' },
   { label: 'Вопросы', href: '#feedback' },
+  { label: 'FAQ', href: '/faq' },
 ];
 
 const Header = () => {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -23,6 +27,17 @@ const Header = () => {
 
   const go = (href: string) => {
     setOpen(false);
+
+    if (href.startsWith('/')) {
+      navigate(href);
+      return;
+    }
+
+    if (location.pathname !== '/') {
+      navigate(`/${href}`);
+      return;
+    }
+
     const el = document.querySelector(href);
     el?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -34,7 +49,7 @@ const Header = () => {
       }`}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 md:px-8">
-        <button onClick={() => go('#top')} aria-label="На главную">
+        <button onClick={() => (location.pathname !== '/' ? navigate('/') : go('#top'))} aria-label="На главную">
           <Logo />
         </button>
 
