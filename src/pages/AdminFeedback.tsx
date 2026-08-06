@@ -18,6 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
+import AdminNav from '@/components/site/AdminNav';
 
 const HISTORY_URL = 'https://functions.poehali.dev/c6e19e20-72b0-4a41-b317-8eb65ffd4dce';
 
@@ -104,6 +105,7 @@ const AdminFeedback = () => {
   return (
     <div className="min-h-screen bg-background px-5 py-10 font-body text-foreground md:px-8">
       <div className="mx-auto max-w-6xl">
+        <AdminNav />
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="font-head text-2xl font-extrabold tracking-[-0.03em]">
