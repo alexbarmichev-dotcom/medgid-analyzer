@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import Logo from './Logo';
 
 const LEGAL = [
@@ -45,7 +46,12 @@ const Footer = () => {
 
         <div className="mt-12 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 text-sm text-muted-foreground sm:flex-row sm:items-center">
           <span>© {new Date().getFullYear()} ЛабГид. Все права защищены.</span>
-          <span>Данные хранятся на серверах в России · 152-ФЗ</span>
+          <div className="flex items-center gap-4">
+            <Link to="/faq" className="transition-colors hover:text-accent">
+              Частые вопросы
+            </Link>
+            <span>Данные хранятся на серверах в России · 152-ФЗ</span>
+          </div>
         </div>
       </div>
     </footer>
