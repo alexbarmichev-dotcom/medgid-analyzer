@@ -6,6 +6,7 @@ import Logo from './Logo';
 const NAV = [
   { label: 'Как это работает', href: '#how' },
   { label: 'Что вы получаете', href: '#features' },
+  { label: 'Отзывы', href: '#reviews' },
   { label: 'Защита данных', href: '#security' },
   { label: 'Стоимость', href: '#pricing' },
   { label: 'Вопросы', href: '#feedback' },
