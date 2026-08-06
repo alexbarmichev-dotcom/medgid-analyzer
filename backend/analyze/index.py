@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import hmac
 import hashlib
 import base64
@@ -13,6 +14,8 @@ from typing import Dict, Any, List, Optional
 
 import boto3
 import psycopg2
+
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 POLZA_URL = "https://polza.ai/api/v1/chat/completions"
 POLZA_MODEL = "anthropic/claude-sonnet-5"
@@ -68,6 +71,17 @@ def _verify_token(token: str, secret: str) -> Optional[str]:
         return None
 
 
+MAX_FILE_BYTES = 15 * 1024 * 1024  # 15 МБ на файл
+ALLOWED_UPLOAD_MIME = {
+    "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif",
+    "application/pdf",
+}
+
+
+class UploadValidationError(Exception):
+    pass
+
+
 def _upload_files(files: List[Dict[str, Any]]) -> List[Dict[str, str]]:
     """Загружает base64-файлы в S3 и возвращает список {url, mime}."""
     s3 = boto3.client(
@@ -78,9 +92,21 @@ def _upload_files(files: List[Dict[str, Any]]) -> List[Dict[str, str]]:
     )
     uploaded = []
     for f in files:
-        raw = base64.b64decode(f["data"])
-        mime = f.get("type") or "application/octet-stream"
-        ext = mime.split("/")[-1].split(";")[0] or "bin"
+        mime = (f.get("type") or "").split(";")[0].strip().lower()
+        if mime not in ALLOWED_UPLOAD_MIME:
+            raise UploadValidationError("Недопустимый тип файла")
+        try:
+            raw = base64.b64decode(f["data"], validate=True)
+        except Exception:
+            raise UploadValidationError("Не удалось прочитать файл")
+        if len(raw) > MAX_FILE_BYTES:
+            raise UploadValidationError("Файл больше 15 МБ")
+        if not raw:
+            raise UploadValidationError("Пустой файл")
+        ext = {
+            "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp",
+            "image/heic": "heic", "image/heif": "heif", "application/pdf": "pdf",
+        }[mime]
         key = f"analyses/{uuid.uuid4()}.{ext}"
         s3.put_object(Bucket="files", Key=key, Body=raw, ContentType=mime)
         url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{key}"
@@ -246,7 +272,9 @@ def _handle_create_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
     complaints = body.get("complaints", "")
     conditions = body.get("conditions", "")
     meds = body.get("meds", "")
-    email = (body.get("email") or "").strip() or None
+    email = (body.get("email") or "").strip()[:255] or None
+    if email and not EMAIL_RE.match(email):
+        return _resp(400, {"error": "Введите корректный email"})
     files = body.get("files") or []
     return_url = body.get("returnUrl") or "https://poehali.dev"
 
@@ -257,6 +285,8 @@ def _handle_create_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
 
     try:
         uploaded = _upload_files(files)
+    except UploadValidationError as e:
+        return _resp(400, {"error": str(e)})
     except Exception:
         return _resp(502, {"error": "Не удалось загрузить файлы"})
 
@@ -373,7 +403,9 @@ def _handle_free_analysis(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
     complaints = body.get("complaints", "")
     conditions = body.get("conditions", "")
     meds = body.get("meds", "")
-    email = (body.get("email") or "").strip() or None
+    email = (body.get("email") or "").strip()[:255] or None
+    if email and not EMAIL_RE.match(email):
+        return _resp(400, {"error": "Введите корректный email"})
     files = body.get("files") or []
 
     if not files:
@@ -383,6 +415,8 @@ def _handle_free_analysis(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
 
     try:
         uploaded = _upload_files(files)
+    except UploadValidationError as e:
+        return _resp(400, {"error": str(e)})
     except Exception:
         return _resp(502, {"error": "Не удалось загрузить файлы"})
 
@@ -430,8 +464,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     token = headers.get("X-Authorization") or headers.get("x-authorization") or ""
     token = token.replace("Bearer ", "").strip()
 
-    secret = os.environ.get("AUTH_SECRET", "medgid-dev-secret")
-    login = _verify_token(token, secret) if token else None
+    secret = os.environ.get("AUTH_SECRET")
+    login = _verify_token(token, secret) if token and secret else None
 
     try:
         body = json.loads(event.get("body") or "{}")

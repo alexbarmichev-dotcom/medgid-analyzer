@@ -12,6 +12,7 @@ import boto3
 
 ALLOWED_TYPES = {"question", "suggestion", "wish", "problem"}
 ALLOWED_STATUSES = {"new", "in_progress", "done", "rejected"}
+# security review: fallback auth secret removed
 
 
 def _resp(status: int, body: Dict[str, Any]) -> Dict[str, Any]:
@@ -47,8 +48,8 @@ def _handle_history(event: Dict[str, Any]) -> Dict[str, Any]:
     token = headers.get("X-Authorization") or headers.get("x-authorization") or ""
     token = token.replace("Bearer ", "").strip()
 
-    secret = os.environ.get("AUTH_SECRET", "medgid-dev-secret")
-    login = _verify_token(token, secret) if token else None
+    secret = os.environ.get("AUTH_SECRET")
+    login = _verify_token(token, secret) if token and secret else None
     if not login:
         return _resp(401, {"error": "Требуется вход в личный кабинет"})
 

@@ -186,7 +186,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     action = body.get("action", "")
     dsn = os.environ["DATABASE_URL"]
-    secret = os.environ.get("AUTH_SECRET", "medgid-dev-secret")
+    secret = os.environ.get("AUTH_SECRET")
+    if not secret:
+        return _resp(500, {"error": "Сервис временно недоступен, попробуйте позже"})
 
     if action == "send_code":
         return _handle_send_code(dsn, body)
