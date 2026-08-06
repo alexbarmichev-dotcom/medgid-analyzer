@@ -35,8 +35,8 @@ const Hero = () => {
           </h1>
 
           <p className="mt-6 max-w-[30ch] text-lg leading-relaxed text-ink-soft sm:text-xl">
-            ЛабГид разбирает каждый показатель отдельно: что означает, почему отклонился
-            и&nbsp;о&nbsp;чём спросить врача на&nbsp;приёме.
+            ЛабГид — сервис расшифровки анализов онлайн: разбирает каждый показатель отдельно, что
+            означает, почему отклонился и&nbsp;о&nbsp;чём спросить врача на&nbsp;приёме.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-6">
