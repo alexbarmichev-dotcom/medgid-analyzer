@@ -74,6 +74,68 @@
       "path": "/?resource=admin&admin=payments",
       "headers": {"X-Admin-Password": "wrong-password-xyz"},
       "expectedStatus": 401
+    },
+    {
+      "name": "list approved reviews",
+      "method": "GET",
+      "path": "/?resource=reviews",
+      "expectedStatus": 200,
+      "expectedBody": {"ok": true},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "create review with valid data",
+      "method": "POST",
+      "path": "/?resource=reviews",
+      "body": {
+        "author": "Тестовый пользователь",
+        "role": "Общий анализ крови",
+        "rating": 5,
+        "text": "Отличный сервис, всё понятно и быстро расшифровали мои анализы крови."
+      },
+      "expectedStatus": 200,
+      "expectedBody": {"ok": true},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "reject review without author",
+      "method": "POST",
+      "path": "/?resource=reviews",
+      "body": {
+        "author": "",
+        "rating": 5,
+        "text": "Отличный сервис, всё понятно и быстро расшифровали мои анализы крови."
+      },
+      "expectedStatus": 400
+    },
+    {
+      "name": "reject review with bad rating",
+      "method": "POST",
+      "path": "/?resource=reviews",
+      "body": {
+        "author": "Тест",
+        "rating": 9,
+        "text": "Отличный сервис, всё понятно и быстро расшифровали мои анализы крови."
+      },
+      "expectedStatus": 400
+    },
+    {
+      "name": "reject too short review text",
+      "method": "POST",
+      "path": "/?resource=reviews",
+      "body": {
+        "author": "Тест",
+        "rating": 5,
+        "text": "Коротко"
+      },
+      "expectedStatus": 400
+    },
+    {
+      "name": "review moderation without admin password",
+      "method": "PATCH",
+      "path": "/?resource=reviews&id=1",
+      "body": {"status": "approved"},
+      "expectedStatus": 401
     }
   ]
 }

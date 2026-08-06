@@ -20,7 +20,7 @@ def _resp(status: int, body: Dict[str, Any]) -> Dict[str, Any]:
         "headers": {
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
+            "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
             "Access-Control-Allow-Headers": "Content-Type, X-Authorization, X-Admin-Password",
         },
         "isBase64Encoded": False,
@@ -165,6 +165,167 @@ def _update_feedback_status(dsn: str, item_id: int, status: str) -> bool:
         conn.close()
 
 
+ALLOWED_REVIEW_STATUSES = {"pending", "approved", "rejected"}
+
+
+def _list_reviews(dsn: str, status: Optional[str]) -> List[Dict[str, Any]]:
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            if status and status in ALLOWED_REVIEW_STATUSES:
+                cur.execute(
+                    "SELECT id, author, role, rating, text, status, created_at "
+                    "FROM reviews WHERE status = %s ORDER BY created_at DESC",
+                    (status,),
+                )
+            else:
+                cur.execute(
+                    "SELECT id, author, role, rating, text, status, created_at "
+                    "FROM reviews ORDER BY created_at DESC"
+                )
+            rows = cur.fetchall()
+    finally:
+        conn.close()
+    return [
+        {
+            "id": r["id"],
+            "author": r["author"],
+            "role": r["role"],
+            "rating": r["rating"],
+            "text": r["text"],
+            "status": r["status"],
+            "createdAt": r["created_at"].isoformat() if r["created_at"] else None,
+        }
+        for r in rows
+    ]
+
+
+def _create_review(dsn: str, author: str, role: str, rating: int, text: str) -> int:
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO reviews (author, role, rating, text, status) "
+                "VALUES (%s, %s, %s, %s, 'pending') RETURNING id",
+                (author, role, rating, text),
+            )
+            new_id = cur.fetchone()[0]
+        conn.commit()
+        return new_id
+    finally:
+        conn.close()
+
+
+def _update_review_status(dsn: str, item_id: int, status: str) -> bool:
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE reviews SET status = %s WHERE id = %s",
+                (status, item_id),
+            )
+            updated = cur.rowcount > 0
+        conn.commit()
+        return updated
+    finally:
+        conn.close()
+
+
+def _delete_review(dsn: str, item_id: int) -> bool:
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM reviews WHERE id = %s", (item_id,))
+            deleted = cur.rowcount > 0
+        conn.commit()
+        return deleted
+    finally:
+        conn.close()
+
+
+def _handle_reviews(event: Dict[str, Any]) -> Dict[str, Any]:
+    method = event.get("httpMethod", "GET")
+    dsn = os.environ["DATABASE_URL"]
+    params = event.get("queryStringParameters") or {}
+
+    if method == "GET":
+        items = _list_reviews(dsn, "approved")
+        return _resp(200, {"ok": True, "items": items})
+
+    if method == "POST":
+        try:
+            body = json.loads(event.get("body") or "{}")
+        except Exception:
+            return _resp(400, {"error": "Некорректный запрос"})
+
+        author = (body.get("author") or "").strip()
+        role = (body.get("role") or "").strip()
+        rating = body.get("rating")
+        text = (body.get("text") or "").strip()
+
+        if not author:
+            return _resp(400, {"error": "Укажите имя"})
+        if len(author) > 120:
+            return _resp(400, {"error": "Слишком длинное имя"})
+        if not isinstance(rating, int) or rating < 1 or rating > 5:
+            return _resp(400, {"error": "Оценка должна быть от 1 до 5"})
+        if len(text) < 20:
+            return _resp(400, {"error": "Отзыв должен содержать не менее 20 символов"})
+        if len(text) > 2000:
+            return _resp(400, {"error": "Слишком длинный текст отзыва"})
+
+        try:
+            new_id = _create_review(dsn, author, role or None, rating, text)
+        except Exception:
+            return _resp(502, {"error": "Не удалось отправить отзыв, попробуйте ещё раз"})
+
+        return _resp(200, {"ok": True, "id": new_id})
+
+    if method == "PATCH":
+        if not _check_admin_auth(event):
+            return _resp(401, {"error": "Неверный пароль администратора"})
+        item_id = params.get("id")
+        try:
+            body = json.loads(event.get("body") or "{}")
+        except Exception:
+            return _resp(400, {"error": "Некорректный запрос"})
+        status = body.get("status", "")
+        if not item_id or status not in ALLOWED_REVIEW_STATUSES:
+            return _resp(400, {"error": "Некорректные параметры"})
+        try:
+            updated = _update_review_status(dsn, int(item_id), status)
+        except Exception:
+            return _resp(502, {"error": "Не удалось обновить статус"})
+        if not updated:
+            return _resp(404, {"error": "Отзыв не найден"})
+        return _resp(200, {"ok": True})
+
+    if method == "DELETE":
+        if not _check_admin_auth(event):
+            return _resp(401, {"error": "Неверный пароль администратора"})
+        item_id = params.get("id")
+        if not item_id:
+            return _resp(400, {"error": "Не указан id"})
+        try:
+            deleted = _delete_review(dsn, int(item_id))
+        except Exception:
+            return _resp(502, {"error": "Не удалось удалить отзыв"})
+        if not deleted:
+            return _resp(404, {"error": "Отзыв не найден"})
+        return _resp(200, {"ok": True})
+
+    return _resp(405, {"error": "Метод не поддерживается"})
+
+
+def _handle_admin_reviews(event: Dict[str, Any]) -> Dict[str, Any]:
+    if not _check_admin_auth(event):
+        return _resp(401, {"error": "Неверный пароль администратора"})
+    dsn = os.environ["DATABASE_URL"]
+    params = event.get("queryStringParameters") or {}
+    items = _list_reviews(dsn, params.get("status"))
+    return _resp(200, {"ok": True, "items": items})
+
+
 def _check_admin_auth(event: Dict[str, Any]) -> bool:
     headers = event.get("headers") or {}
     provided = headers.get("X-Admin-Password") or headers.get("x-admin-password") or ""
@@ -242,6 +403,9 @@ def _handle_admin(event: Dict[str, Any]) -> Dict[str, Any]:
     if admin_resource == "users":
         return _resp(200, {"ok": True, "items": _list_admin_users(dsn)})
 
+    if admin_resource == "reviews":
+        return _resp(200, {"ok": True, "items": _list_reviews(dsn, params.get("status"))})
+
     return _resp(400, {"error": "Неизвестный ресурс"})
 
 
@@ -312,14 +476,16 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Business: возвращает историю запросов пользователя (расшифровок анализов) личного
     кабинета ЛабГид, принимает и отдаёт обращения пользователей (resource=feedback),
-    а также отдаёт закрытую админ-панель со списком платежей и пользователей
-    (resource=admin, admin=payments|users) по паролю в заголовке X-Admin-Password.
-    Args: event с httpMethod, queryStringParameters {resource: 'feedback'|'admin', type,
-          status, id, admin}, headers.X-Authorization (токен логина) для истории,
-          headers.X-Admin-Password для админ-панели,
+    принимает и отдаёт отзывы клиентов (resource=reviews), а также отдаёт закрытую
+    админ-панель со списком платежей, пользователей и отзывов на модерации
+    (resource=admin, admin=payments|users|reviews) по паролю в заголовке X-Admin-Password.
+    Args: event с httpMethod, queryStringParameters {resource: 'feedback'|'reviews'|'admin',
+          type, status, id, admin}, headers.X-Authorization (токен логина) для истории,
+          headers.X-Admin-Password для админ-панели и модерации отзывов,
           body {type, subject, message, screenshot} для создания обращения,
-          body {status} для обновления статуса обращения администратором
-    Returns: HTTP-ответ со списком истории анализов, обращений или платежей/пользователей
+          body {author, role, rating, text} для отправки отзыва,
+          body {status} для обновления статуса обращения/отзыва администратором
+    Returns: HTTP-ответ со списком истории анализов, обращений, отзывов или платежей/пользователей
     """
     method = event.get("httpMethod", "GET")
     if method == "OPTIONS":
@@ -328,6 +494,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     params = event.get("queryStringParameters") or {}
     if params.get("resource") == "feedback":
         return _handle_feedback(event)
+    if params.get("resource") == "reviews":
+        return _handle_reviews(event)
     if params.get("resource") == "admin":
         return _handle_admin(event)
 
