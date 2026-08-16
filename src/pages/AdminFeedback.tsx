@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -54,21 +55,33 @@ interface FeedbackItem {
 }
 
 const AdminFeedback = () => {
+  const [password, setPassword] = useState(() => sessionStorage.getItem('medgid_admin_pwd') || '');
+  const [authorized, setAuthorized] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [items, setItems] = useState<FeedbackItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const load = async () => {
+  const authHeaders = (pwd = password) => ({ 'X-Admin-Password': pwd });
+
+  const load = async (pwd = password) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ resource: 'feedback' });
       if (typeFilter !== 'all') params.set('type', typeFilter);
       if (statusFilter !== 'all') params.set('status', statusFilter);
-      const res = await fetch(`${HISTORY_URL}?${params.toString()}`);
+      const res = await fetch(`${HISTORY_URL}?${params.toString()}`, {
+        headers: authHeaders(pwd),
+      });
       const data = await res.json();
       if (res.ok) {
         setItems(data.items || []);
+        setAuthorized(true);
+        sessionStorage.setItem('medgid_admin_pwd', pwd);
+      } else if (res.status === 401) {
+        toast({ title: 'Неверный пароль' });
+        setAuthorized(false);
       } else {
         toast({ title: data.error || 'Не удалось загрузить обращения' });
       }
@@ -76,11 +89,20 @@ const AdminFeedback = () => {
       toast({ title: 'Ошибка сети, попробуйте ещё раз' });
     } finally {
       setLoading(false);
+      setChecking(false);
     }
   };
 
   useEffect(() => {
-    load();
+    if (password) {
+      setChecking(true);
+      load(password);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (authorized) load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeFilter, statusFilter]);
 
@@ -88,7 +110,7 @@ const AdminFeedback = () => {
     try {
       const res = await fetch(`${HISTORY_URL}?resource=feedback&id=${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ status }),
       });
       const data = await res.json();
@@ -101,6 +123,26 @@ const AdminFeedback = () => {
       toast({ title: 'Ошибка сети, попробуйте ещё раз' });
     }
   };
+
+  if (!authorized) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-5 font-body">
+        <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-card p-6">
+          <h1 className="font-head text-xl font-bold">Вход в админ-панель</h1>
+          <Input
+            type="password"
+            placeholder="Пароль администратора"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && load(password)}
+          />
+          <Button className="w-full" disabled={checking} onClick={() => { setChecking(true); load(password); }}>
+            {checking ? 'Проверяем…' : 'Войти'}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background px-5 py-10 font-body text-foreground md:px-8">
@@ -115,7 +157,7 @@ const AdminFeedback = () => {
               Раздел «Вопросы по работе приложения» — все обращения с фильтрацией
             </p>
           </div>
-          <Button variant="outline" onClick={load}>
+          <Button variant="outline" onClick={() => load()}>
             <Icon name="RefreshCw" size={16} />
             Обновить
           </Button>

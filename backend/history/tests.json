@@ -55,12 +55,17 @@
       "expectedStatus": 400
     },
     {
-      "name": "list feedback",
+      "name": "list feedback without admin password",
       "method": "GET",
       "path": "/?resource=feedback",
-      "expectedStatus": 200,
-      "expectedBody": {"ok": true},
-      "bodyMatcher": "partial"
+      "expectedStatus": 401
+    },
+    {
+      "name": "feedback moderation without admin password",
+      "method": "PATCH",
+      "path": "/?resource=feedback&id=1",
+      "body": {"status": "done"},
+      "expectedStatus": 401
     },
     {
       "name": "admin without password",

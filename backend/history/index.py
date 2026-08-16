@@ -85,15 +85,34 @@ def _handle_history(event: Dict[str, Any]) -> Dict[str, Any]:
     return _resp(200, {"ok": True, "items": items})
 
 
+MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024  # 5 МБ
+ALLOWED_SCREENSHOT_MIME = {"image/png", "image/jpeg", "image/webp", "image/gif"}
+
+
+class UploadValidationError(Exception):
+    pass
+
+
 def _upload_screenshot(data_b64: str, mime: str) -> str:
+    mime = (mime or "").split(";")[0].strip().lower()
+    if mime not in ALLOWED_SCREENSHOT_MIME:
+        raise UploadValidationError("Недопустимый тип файла")
+    try:
+        raw = base64.b64decode(data_b64, validate=True)
+    except Exception:
+        raise UploadValidationError("Не удалось прочитать файл")
+    if not raw:
+        raise UploadValidationError("Пустой файл")
+    if len(raw) > MAX_SCREENSHOT_BYTES:
+        raise UploadValidationError("Файл больше 5 МБ")
+
     s3 = boto3.client(
         "s3",
         endpoint_url="https://bucket.poehali.dev",
         aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
         aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
     )
-    raw = base64.b64decode(data_b64)
-    ext = (mime.split("/")[-1].split(";")[0] or "png")
+    ext = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif"}[mime]
     key = f"feedback/{uuid.uuid4()}.{ext}"
     s3.put_object(Bucket="files", Key=key, Body=raw, ContentType=mime)
     return f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{key}"
@@ -416,6 +435,8 @@ def _handle_feedback(event: Dict[str, Any]) -> Dict[str, Any]:
     params = event.get("queryStringParameters") or {}
 
     if method == "GET":
+        if not _check_admin_auth(event):
+            return _resp(401, {"error": "Неверный пароль администратора"})
         items = _list_feedback(dsn, params.get("type"), params.get("status"))
         return _resp(200, {"ok": True, "items": items})
 
@@ -443,6 +464,8 @@ def _handle_feedback(event: Dict[str, Any]) -> Dict[str, Any]:
                 screenshot_url = _upload_screenshot(
                     screenshot["data"], screenshot.get("mime", "image/png")
                 )
+            except UploadValidationError as e:
+                return _resp(400, {"error": str(e)})
             except Exception:
                 return _resp(502, {"error": "Не удалось загрузить скриншот"})
 
@@ -454,6 +477,8 @@ def _handle_feedback(event: Dict[str, Any]) -> Dict[str, Any]:
         return _resp(200, {"ok": True, "id": new_id})
 
     if method == "PATCH":
+        if not _check_admin_auth(event):
+            return _resp(401, {"error": "Неверный пароль администратора"})
         item_id = params.get("id")
         try:
             body = json.loads(event.get("body") or "{}")
