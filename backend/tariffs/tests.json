@@ -1,0 +1,49 @@
+{
+  "tests": [
+    {
+      "name": "options preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "list tariffs is public",
+      "method": "GET",
+      "path": "/?resource=list",
+      "expectedStatus": 200
+    },
+    {
+      "name": "me without auth",
+      "method": "GET",
+      "path": "/?resource=me",
+      "expectedStatus": 401
+    },
+    {
+      "name": "me with invalid token",
+      "method": "GET",
+      "path": "/?resource=me",
+      "headers": {"X-Authorization": "invalid.token"},
+      "expectedStatus": 401
+    },
+    {
+      "name": "create_payment without auth",
+      "method": "POST",
+      "path": "/?action=create_payment",
+      "body": {"tariffId": "sub_3m"},
+      "expectedStatus": 401
+    },
+    {
+      "name": "check_payment without auth",
+      "method": "POST",
+      "path": "/?action=check_payment",
+      "body": {"paymentId": "test"},
+      "expectedStatus": 401
+    },
+    {
+      "name": "unknown GET resource",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 405
+    }
+  ]
+}

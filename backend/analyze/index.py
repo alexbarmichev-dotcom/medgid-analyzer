@@ -21,7 +21,7 @@ POLZA_URL = "https://polza.ai/api/v1/chat/completions"
 POLZA_MODEL = "anthropic/claude-sonnet-5"
 
 YOOKASSA_API = "https://api.yookassa.ru/v3"
-PRICE_RUB = "190.00"
+PRICE_RUB = "299.00"
 
 SMTP_HOST = "smtp.mail.ru"
 SMTP_PORT = 465
@@ -265,6 +265,28 @@ def _mark_pending(dsn: str, payment_id: str, status: str) -> None:
         conn.close()
 
 
+def _mark_one_time_used(dsn: str, login: str) -> None:
+    """Фиксирует тариф 'Разовая оплата' как использованный, не трогая активную подписку."""
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT current_tariff_id, tariff_status FROM users WHERE login = %s",
+                (login,),
+            )
+            row = cur.fetchone()
+            if row and row[0] in ("sub_3m", "sub_12m") and row[1] == "active":
+                return
+            cur.execute(
+                "UPDATE users SET current_tariff_id = 'one_time', tariff_started_at = now(), "
+                "tariff_expires_at = NULL, tariff_status = 'one_time_used' WHERE login = %s",
+                (login,),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def _handle_create_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
     gender = body.get("gender", "")
     age_raw = body.get("age", "")
@@ -381,6 +403,7 @@ def _handle_check_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
             [f["url"] for f in uploaded], ai_result, payment_id, "paid", PRICE_RUB, email,
         )
         _mark_pending(dsn, payment_id, "done")
+        _mark_one_time_used(dsn, login)
         if email:
             _send_result_email(email, ai_result)
         return _resp(200, {"ok": True, "status": "done", "id": analysis_id, "result": ai_result})
@@ -443,9 +466,9 @@ def _handle_free_analysis(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
-    Business: обрабатывает платный разбор анализов личного кабинета ЛабГид через ЮKassa.
-    Поддерживает три действия (?action=): create_payment — создаёт платёж на 190 руб.
-    и сохраняет заявку на разбор; check_payment — проверяет статус оплаты, при успехе
+    Business: обрабатывает платный разбор анализов личного кабинета ЛабГид через ЮKassa
+    (тариф «Разовая оплата», 299 руб). Поддерживает три действия (?action=): create_payment —
+    создаёт платёж и сохраняет заявку на разбор; check_payment — проверяет статус оплаты, при успехе
     запускает ИИ-расшифровку (Claude через Polza AI) и сохраняет результат; free — прямой
     бесплатный разбор для аккаунтов с флагом is_free (минуя оплату).
     Args: event с httpMethod, queryStringParameters.action, headers.X-Authorization (токен
