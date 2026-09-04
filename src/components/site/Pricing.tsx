@@ -213,7 +213,7 @@ const Pricing = () => {
                       {tariff.description}
                     </p>
                     {highlighted ? (
-                      <p className="mt-6 font-caveat text-2xl leading-snug text-accent-foreground">
+                      <p className="mt-6 text-sm font-medium leading-relaxed text-accent-foreground">
                         Вы начнёте понимать своё здоровье ещё до приёма у специалиста. А наблюдая
                         за динамикой показателей во времени, вы увидите не просто разовый
                         результат — а тренд. Именно он говорит о здоровье гораздо больше, чем одна
