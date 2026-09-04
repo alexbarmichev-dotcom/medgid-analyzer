@@ -206,7 +206,7 @@ const Pricing = () => {
                       </span>
                     </div>
                     <p
-                      className={`mt-3 text-sm leading-relaxed ${
+                      className={`mt-3 text-base leading-relaxed ${
                         highlighted ? 'text-accent-foreground/85' : 'text-ink-soft'
                       }`}
                     >
