@@ -21,7 +21,7 @@ POLZA_URL = "https://polza.ai/api/v1/chat/completions"
 POLZA_MODEL = "anthropic/claude-sonnet-5"
 
 YOOKASSA_API = "https://api.yookassa.ru/v3"
-PRICE_RUB = "299.00"
+PRICE_RUB = "150.00"
 
 SMTP_HOST = "smtp.mail.ru"
 SMTP_PORT = 465

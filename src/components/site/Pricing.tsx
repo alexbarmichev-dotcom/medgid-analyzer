@@ -167,15 +167,15 @@ const Pricing = () => {
         </div>
 
         {loading ? (
-          <div className="grid gap-6 lg:grid-cols-3">
-            {[0, 1, 2].map((i) => (
+          <div className="grid gap-6 sm:grid-cols-2">
+            {[0, 1].map((i) => (
               <div key={i} className="h-96 animate-pulse rounded-3xl bg-muted" />
             ))}
           </div>
         ) : (
-          <div className="grid items-stretch gap-6 lg:grid-cols-3">
+          <div className="grid items-stretch gap-6 sm:grid-cols-2">
             {tariffs.map((tariff) => {
-              const highlighted = tariff.id === 'sub_3m';
+              const highlighted = tariff.id === 'sub_12m';
               const current = isCurrentPlan(tariff.id);
               return (
                 <div

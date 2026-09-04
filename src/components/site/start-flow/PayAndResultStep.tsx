@@ -35,7 +35,7 @@ export const PayStep = ({ analyzing, checkingPayment, onPay, onBack }: PayStepPr
       <div>
         <h3 className="font-head text-xl font-bold">Всё готово к разбору</h3>
         <p className="mt-2 text-ink-soft">
-          Стоимость одного запроса — <b>299&nbsp;₽</b>. Вы перейдёте на защищённую страницу
+          Стоимость одного запроса — <b>150&nbsp;₽</b>. Вы перейдёте на защищённую страницу
           оплаты ЮKassa, а расшифровка начнётся сразу после подтверждения оплаты.
         </p>
       </div>
@@ -44,7 +44,7 @@ export const PayStep = ({ analyzing, checkingPayment, onPay, onBack }: PayStepPr
         disabled={analyzing}
         className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius)] bg-accent px-6 py-4 text-base font-semibold text-accent-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-60"
       >
-        {analyzing ? 'Готовим оплату…' : 'Оплатить 299 ₽'}
+        {analyzing ? 'Готовим оплату…' : 'Оплатить 150 ₽'}
         {!analyzing && <Icon name="CreditCard" size={18} />}
       </button>
       <button
