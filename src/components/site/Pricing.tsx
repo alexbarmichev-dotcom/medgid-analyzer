@@ -212,34 +212,37 @@ const Pricing = () => {
                     >
                       {tariff.description}
                     </p>
-                    <ul className="mt-6 space-y-3">
-                      {tariff.features.map((item) => (
-                        <li key={item} className="flex items-start gap-2.5">
-                          <span
-                            className={`mt-0.5 grid h-5 w-5 flex-none place-items-center rounded-full ${
-                              highlighted ? 'bg-primary/20' : 'bg-hand/12 text-hand'
-                            }`}
-                          >
-                            <Icon name="Check" size={12} />
-                          </span>
-                          <span className="text-sm leading-snug">{item}</span>
-                        </li>
-                      ))}
-                      {tariff.chatQuestionLimit && (
-                        <li className="flex items-start gap-2.5">
-                          <span
-                            className={`mt-0.5 grid h-5 w-5 flex-none place-items-center rounded-full ${
-                              highlighted ? 'bg-primary/20' : 'bg-hand/12 text-hand'
-                            }`}
-                          >
-                            <Icon name="MessageCircle" size={12} />
-                          </span>
-                          <span className="text-sm font-semibold leading-snug">
-                            AI-чат: до {tariff.chatQuestionLimit} вопросов в месяц
-                          </span>
-                        </li>
-                      )}
-                    </ul>
+                    {highlighted ? (
+                      <p className="mt-6 font-caveat text-2xl leading-snug text-accent-foreground">
+                        Вы начнёте понимать своё здоровье ещё до приёма у специалиста. А наблюдая
+                        за динамикой показателей во времени, вы увидите не просто разовый
+                        результат — а тренд. Именно он говорит о здоровье гораздо больше, чем одна
+                        точка на графике. Это новый уровень диалога между вами и вашим здоровьем.
+                        Понимайте своё тело. Следите за трендами в динамике, а не только за
+                        статичными цифрами.
+                      </p>
+                    ) : (
+                      <ul className="mt-6 space-y-3">
+                        {tariff.features.map((item) => (
+                          <li key={item} className="flex items-start gap-2.5">
+                            <span className="mt-0.5 grid h-5 w-5 flex-none place-items-center rounded-full bg-hand/12 text-hand">
+                              <Icon name="Check" size={12} />
+                            </span>
+                            <span className="text-sm leading-snug">{item}</span>
+                          </li>
+                        ))}
+                        {tariff.chatQuestionLimit && (
+                          <li className="flex items-start gap-2.5">
+                            <span className="mt-0.5 grid h-5 w-5 flex-none place-items-center rounded-full bg-hand/12 text-hand">
+                              <Icon name="MessageCircle" size={12} />
+                            </span>
+                            <span className="text-sm font-semibold leading-snug">
+                              AI-чат: до {tariff.chatQuestionLimit} вопросов в месяц
+                            </span>
+                          </li>
+                        )}
+                      </ul>
+                    )}
                   </div>
                   <button
                     onClick={() => handleSelect(tariff)}
