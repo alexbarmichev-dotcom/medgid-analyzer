@@ -14,6 +14,9 @@ from typing import Dict, Any, Optional
 import psycopg2
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+LOGIN_RE = re.compile(r"^[A-Za-zА-Яа-яЁё0-9_-]{2,32}$")
+PASSWORD_RE = re.compile(r"^\d{4}$")
+DEVICE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{6,64}$")
 CODE_TTL_SECONDS = 600
 RESEND_COOLDOWN_SECONDS = 60
 MAX_ATTEMPTS = 5
@@ -24,6 +27,20 @@ SMTP_PORT = 465
 
 def _normalize_email(raw: str) -> str:
     return (raw or "").strip().lower()[:255]
+
+
+def _hash_password(password: str, salt: Optional[str] = None) -> str:
+    salt = salt or os.urandom(16).hex()
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100_000).hex()
+    return f"{salt}${digest}"
+
+
+def _verify_password(password: str, stored: str) -> bool:
+    try:
+        salt, _ = stored.split("$", 1)
+    except ValueError:
+        return False
+    return hmac.compare_digest(_hash_password(password, salt), stored)
 
 
 def _sign_token(login: str, secret: str) -> str:
@@ -83,6 +100,61 @@ def _find_or_create_user(dsn: str, email: str) -> bool:
         return False
     finally:
         conn.close()
+
+
+def _handle_anonymous(dsn: str, body: Dict[str, Any], secret: str) -> Dict[str, Any]:
+    device_id = (body.get("deviceId") or "").strip()
+    if not DEVICE_ID_RE.match(device_id):
+        return _resp(400, {"error": "Некорректный идентификатор устройства"})
+
+    login = f"guest:{device_id}"
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO users (login, is_free) VALUES (%s, false) "
+                "ON CONFLICT (login) DO NOTHING",
+                (login,),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+    token = _sign_token(login, secret)
+    return _resp(200, {"ok": True, "token": token, "login": login, "isFree": False})
+
+
+def _handle_password_login(dsn: str, body: Dict[str, Any], secret: str) -> Dict[str, Any]:
+    raw_login = (body.get("login") or "").strip()
+    password = str(body.get("password") or "").strip()
+    if not LOGIN_RE.match(raw_login):
+        return _resp(400, {"error": "Логин: от 2 до 32 букв, цифр, _ или -"})
+    if not PASSWORD_RE.match(password):
+        return _resp(400, {"error": "Пароль должен состоять ровно из 4 цифр"})
+
+    login = f"acct:{raw_login.lower()}"
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT password_hash, is_free FROM users WHERE login = %s", (login,))
+            row = cur.fetchone()
+            if row:
+                stored_hash, is_free = row
+                if not stored_hash or not _verify_password(password, stored_hash):
+                    return _resp(401, {"error": "Неверный логин или пароль"})
+            else:
+                password_hash = _hash_password(password)
+                cur.execute(
+                    "INSERT INTO users (login, password_hash, is_free) VALUES (%s, %s, false)",
+                    (login, password_hash),
+                )
+                is_free = False
+        conn.commit()
+    finally:
+        conn.close()
+
+    token = _sign_token(login, secret)
+    return _resp(200, {"ok": True, "token": token, "login": login, "isFree": bool(is_free)})
 
 
 def _handle_send_code(dsn: str, body: Dict[str, Any]) -> Dict[str, Any]:
@@ -168,11 +240,14 @@ def _handle_verify_code(dsn: str, body: Dict[str, Any], secret: str) -> Dict[str
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
-    Business: вход в личный кабинет ЛабГид по email через код подтверждения
-    (без пароля). send_code — генерирует и отправляет 4-значный код на почту
-    через SMTP Mail.ru, verify_code — проверяет код и выдаёт токен сессии,
-    создавая пользователя при первом входе.
-    Args: event с httpMethod, body {action: 'send_code'|'verify_code', email, code}
+    Business: вход в личный кабинет ЛабГид. Для разового бесплатного доступа —
+    anonymous (создаёт/находит гостевой аккаунт по deviceId браузера, без
+    какой-либо верификации). Для подписки — на выбор: send_code/verify_code
+    (вход по email через 4-значный код на почту) либо password_login (вход
+    по произвольному логину и 4-значному цифровому паролю, аккаунт создаётся
+    автоматически при первом входе).
+    Args: event с httpMethod, body {action: 'anonymous'|'send_code'|'verify_code'|
+          'password_login', deviceId?, email?, code?, login?, password?}
     Returns: HTTP-ответ с токеном сессии либо подтверждением отправки кода
     """
     method = event.get("httpMethod", "POST")
@@ -189,6 +264,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     secret = os.environ.get("AUTH_SECRET")
     if not secret:
         return _resp(500, {"error": "Сервис временно недоступен, попробуйте позже"})
+
+    if action == "anonymous":
+        return _handle_anonymous(dsn, body, secret)
+
+    if action == "password_login":
+        return _handle_password_login(dsn, body, secret)
 
     if action == "send_code":
         return _handle_send_code(dsn, body)

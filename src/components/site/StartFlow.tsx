@@ -6,6 +6,8 @@ const StartFlow = () => {
   const {
     step,
     setStep,
+    authMode,
+    anonymousLoading,
     authEmail,
     setAuthEmail,
     code,
@@ -15,6 +17,15 @@ const StartFlow = () => {
     setConsent,
     sendingCode,
     verifying,
+    loginValue,
+    setLoginValue,
+    passwordValue,
+    setPasswordValue,
+    passwordConsent,
+    setPasswordConsent,
+    passwordLoginValid,
+    passwordSubmitting,
+    passwordLogin,
     gender,
     setGender,
     age,
@@ -71,6 +82,8 @@ const StartFlow = () => {
         <StartFlowPanel
           step={step}
           setStep={setStep}
+          authMode={authMode}
+          anonymousLoading={anonymousLoading}
           authEmail={authEmail}
           setAuthEmail={setAuthEmail}
           code={code}
@@ -80,6 +93,15 @@ const StartFlow = () => {
           setConsent={setConsent}
           sendingCode={sendingCode}
           verifying={verifying}
+          loginValue={loginValue}
+          setLoginValue={setLoginValue}
+          passwordValue={passwordValue}
+          setPasswordValue={setPasswordValue}
+          passwordConsent={passwordConsent}
+          setPasswordConsent={setPasswordConsent}
+          passwordLoginValid={passwordLoginValid}
+          passwordSubmitting={passwordSubmitting}
+          passwordLogin={passwordLogin}
           authEmailValid={authEmailValid}
           sendCode={sendCode}
           verifyCode={verifyCode}

@@ -26,6 +26,27 @@
       "path": "/",
       "body": {"action": "unknown"},
       "expectedStatus": 400
+    },
+    {
+      "name": "anonymous without deviceId",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "anonymous", "deviceId": ""},
+      "expectedStatus": 400
+    },
+    {
+      "name": "password_login with bad password format",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "password_login", "login": "testuser", "password": "abcd"},
+      "expectedStatus": 400
+    },
+    {
+      "name": "password_login with bad login format",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "password_login", "login": "a", "password": "1234"},
+      "expectedStatus": 400
     }
   ]
 }

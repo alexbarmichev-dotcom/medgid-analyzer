@@ -2,11 +2,13 @@ import Icon from '@/components/ui/icon';
 import AuthStep from '@/components/site/start-flow/AuthStep';
 import ProfileFormStep from '@/components/site/start-flow/ProfileFormStep';
 import { PayStep, DoneStep } from '@/components/site/start-flow/PayAndResultStep';
-import { Step } from '@/components/site/start-flow/useStartFlow';
+import { Step, AuthMode } from '@/components/site/start-flow/useStartFlow';
 
 interface StartFlowPanelProps {
   step: Step;
   setStep: (step: Step) => void;
+  authMode: AuthMode;
+  anonymousLoading: boolean;
   authEmail: string;
   setAuthEmail: (email: string) => void;
   code: string;
@@ -16,6 +18,15 @@ interface StartFlowPanelProps {
   setConsent: (consent: boolean) => void;
   sendingCode: boolean;
   verifying: boolean;
+  loginValue: string;
+  setLoginValue: (v: string) => void;
+  passwordValue: string;
+  setPasswordValue: (v: string) => void;
+  passwordConsent: boolean;
+  setPasswordConsent: (v: boolean) => void;
+  passwordLoginValid: boolean;
+  passwordSubmitting: boolean;
+  passwordLogin: () => void;
   authEmailValid: boolean;
   sendCode: () => void;
   verifyCode: () => void;
@@ -47,6 +58,8 @@ interface StartFlowPanelProps {
 const StartFlowPanel = ({
   step,
   setStep,
+  authMode,
+  anonymousLoading,
   authEmail,
   setAuthEmail,
   code,
@@ -56,6 +69,15 @@ const StartFlowPanel = ({
   setConsent,
   sendingCode,
   verifying,
+  loginValue,
+  setLoginValue,
+  passwordValue,
+  setPasswordValue,
+  passwordConsent,
+  setPasswordConsent,
+  passwordLoginValid,
+  passwordSubmitting,
+  passwordLogin,
   authEmailValid,
   sendCode,
   verifyCode,
@@ -114,7 +136,27 @@ const StartFlowPanel = ({
       )}
 
       <div className="rounded-3xl border border-border bg-card p-6 shadow-[0_26px_50px_-40px_rgba(28,27,24,0.5)] md:p-9">
-        {step === 'auth' && (
+        {step === 'auth' && authMode === 'anonymous' && (
+          <div className="animate-fade-in space-y-5 py-6 text-center">
+            <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-hand/12 text-hand">
+              <Icon
+                name={anonymousLoading ? 'Loader2' : 'ShieldCheck'}
+                size={26}
+                className={anonymousLoading ? 'animate-spin' : ''}
+              />
+            </span>
+            <div>
+              <h3 className="font-head text-xl font-bold">
+                {anonymousLoading ? 'Открываем свободный доступ…' : 'Доступ свободный'}
+              </h3>
+              <p className="mt-2 text-ink-soft">
+                Для разового разбора анализа верификация не требуется — можно начать сразу.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {step === 'auth' && authMode === 'account' && (
           <AuthStep
             email={authEmail}
             setEmail={setAuthEmail}
@@ -129,6 +171,15 @@ const StartFlowPanel = ({
             sendCode={sendCode}
             verifyCode={verifyCode}
             resendCode={resendCode}
+            loginValue={loginValue}
+            setLoginValue={setLoginValue}
+            passwordValue={passwordValue}
+            setPasswordValue={setPasswordValue}
+            passwordConsent={passwordConsent}
+            setPasswordConsent={setPasswordConsent}
+            passwordLoginValid={passwordLoginValid}
+            passwordSubmitting={passwordSubmitting}
+            passwordLogin={passwordLogin}
           />
         )}
 

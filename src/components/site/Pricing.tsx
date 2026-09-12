@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { toast } from '@/hooks/use-toast';
+import { getStoredToken } from '@/lib/authStorage';
+import { emitStartIntent } from '@/lib/startFlowBus';
 
 const TARIFFS_URL = 'https://functions.poehali.dev/d75f0411-629b-4a8f-9a09-f4ffbcdcec4f';
 const PENDING_SUB_KEY = 'medgid_pending_subscription';
@@ -50,7 +52,7 @@ const Pricing = () => {
   };
 
   const loadMyTariff = async () => {
-    const token = localStorage.getItem('medgid_token');
+    const token = getStoredToken();
     if (!token) return;
     try {
       const res = await fetch(`${TARIFFS_URL}?resource=me`, {
@@ -70,7 +72,7 @@ const Pricing = () => {
   };
 
   const checkPendingSubscription = async (paymentId: string) => {
-    const token = localStorage.getItem('medgid_token');
+    const token = getStoredToken();
     if (!token) return;
     try {
       const res = await fetch(`${TARIFFS_URL}?action=check_payment`, {
@@ -107,13 +109,15 @@ const Pricing = () => {
 
   const handleSelect = async (tariff: Tariff) => {
     if (tariff.id === 'one_time') {
+      emitStartIntent('anonymous');
       scrollTo('#start');
       return;
     }
 
-    const token = localStorage.getItem('medgid_token');
+    const token = getStoredToken();
     if (!token) {
-      toast({ title: 'Сначала войдите в личный кабинет', description: 'Это займёт меньше минуты' });
+      emitStartIntent('subscribe', tariff.id);
+      toast({ title: 'Сначала войдите', description: 'Это займёт меньше минуты' });
       scrollTo('#start');
       return;
     }
@@ -213,26 +217,38 @@ const Pricing = () => {
                       {tariff.description}
                     </p>
                     {highlighted ? (
-                      <p className="mt-6 font-medium leading-relaxed text-accent-foreground text-xl">
-                        Вы начнёте понимать своё здоровье ещё до приёма у специалиста. А наблюдая
-                        за динамикой показателей во времени, вы увидите не просто разовый
-                        результат — а тренд. Именно он говорит о здоровье гораздо больше, чем одна
-                        точка на графике. Это новый уровень диалога между вами и вашим здоровьем.
-                        Понимайте своё тело. Следите за трендами в динамике, а не только за
-                        статичными цифрами.
-                      </p>
+                      <>
+                        <p className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary/15 px-4 py-2.5 text-sm font-medium text-accent-foreground">
+                          <Icon name="KeyRound" size={16} />
+                          Вход по email-коду или по своему логину и паролю
+                        </p>
+                        <p className="mt-4 font-medium leading-relaxed text-accent-foreground text-xl">
+                          Вы начнёте понимать своё здоровье ещё до приёма у специалиста. А
+                          наблюдая за динамикой показателей во времени, вы увидите не просто
+                          разовый результат — а тренд. Именно он говорит о здоровье гораздо
+                          больше, чем одна точка на графике. Это новый уровень диалога между вами
+                          и вашим здоровьем. Понимайте своё тело. Следите за трендами в динамике,
+                          а не только за статичными цифрами.
+                        </p>
+                      </>
                     ) : tariff.id === 'one_time' ? (
-                      <p className="mt-6 leading-relaxed text-ink-soft text-lg">
-                        Отправьте скан или фото результатов лабораторных исследований: общий и
-                        биохимический анализ крови, гормоны щитовидной железы, витамины, анализ
-                        мочи, копрограмму и другие. Укажите возраст, пол и текущие жалобы. Запрос
-                        обрабатывается нейронной сетью, специально обученной на медицинских
-                        данных. Получите понятное резюме. Каждый показатель разбирается отдельно:
-                        что означает, почему важен, в какую сторону отклоняется от нормы. Вы также
-                        получаете рекомендации — какие дополнительные исследования стоит пройти, и
-                        готовый список вопросов для врача, чтобы приём прошёл максимально
-                        продуктивно.
-                      </p>
+                      <>
+                        <p className="mt-4 inline-flex items-center gap-2 rounded-xl bg-hand/12 px-4 py-2.5 text-sm font-medium text-hand">
+                          <Icon name="Unlock" size={16} />
+                          Доступ свободный — без email и регистрации
+                        </p>
+                        <p className="mt-4 leading-relaxed text-ink-soft text-lg">
+                          Отправьте скан или фото результатов лабораторных исследований: общий и
+                          биохимический анализ крови, гормоны щитовидной железы, витамины, анализ
+                          мочи, копрограмму и другие. Укажите возраст, пол и текущие жалобы. Запрос
+                          обрабатывается нейронной сетью, специально обученной на медицинских
+                          данных. Получите понятное резюме. Каждый показатель разбирается отдельно:
+                          что означает, почему важен, в какую сторону отклоняется от нормы. Вы
+                          также получаете рекомендации — какие дополнительные исследования стоит
+                          пройти, и готовый список вопросов для врача, чтобы приём прошёл
+                          максимально продуктивно.
+                        </p>
+                      </>
                     ) : (
                       <ul className="mt-6 space-y-3">
                         {tariff.features.map((item) => (
