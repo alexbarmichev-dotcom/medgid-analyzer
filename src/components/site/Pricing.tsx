@@ -3,6 +3,7 @@ import Icon from '@/components/ui/icon';
 import { toast } from '@/hooks/use-toast';
 import { getStoredToken } from '@/lib/authStorage';
 import { emitStartIntent } from '@/lib/startFlowBus';
+import ChatDialog from '@/components/site/start-flow/ChatDialog';
 
 const TARIFFS_URL = 'https://functions.poehali.dev/d75f0411-629b-4a8f-9a09-f4ffbcdcec4f';
 const PENDING_SUB_KEY = 'medgid_pending_subscription';
@@ -38,6 +39,7 @@ const Pricing = () => {
   const [loading, setLoading] = useState(true);
   const [myTariff, setMyTariff] = useState<MyTariff | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const loadTariffs = async () => {
     try {
@@ -272,30 +274,42 @@ const Pricing = () => {
                       </ul>
                     )}
                   </div>
-                  <button
-                    onClick={() => handleSelect(tariff)}
-                    disabled={payingId === tariff.id || current}
-                    className={`mt-8 inline-flex items-center justify-center gap-2.5 rounded-[var(--radius)] px-7 py-4 text-base font-semibold transition-transform hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0 ${
-                      highlighted
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-accent text-accent-foreground'
-                    }`}
-                  >
-                    {current
-                      ? 'Уже подключён'
-                      : payingId === tariff.id
-                        ? 'Готовим оплату…'
-                        : tariff.id === 'one_time'
-                          ? 'Начать разбор'
-                          : 'Оформить подписку'}
-                    {!current && payingId !== tariff.id && <Icon name="ArrowRight" size={18} />}
-                  </button>
+                  {current && tariff.id === 'sub_12m' ? (
+                    <button
+                      onClick={() => setChatOpen(true)}
+                      className="mt-8 inline-flex items-center justify-center gap-2.5 rounded-[var(--radius)] bg-primary px-7 py-4 text-base font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
+                    >
+                      <Icon name="MessageCircle" size={18} />
+                      Задать вопрос
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleSelect(tariff)}
+                      disabled={payingId === tariff.id || current}
+                      className={`mt-8 inline-flex items-center justify-center gap-2.5 rounded-[var(--radius)] px-7 py-4 text-base font-semibold transition-transform hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0 ${
+                        highlighted
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-accent text-accent-foreground'
+                      }`}
+                    >
+                      {current
+                        ? 'Уже подключён'
+                        : payingId === tariff.id
+                          ? 'Готовим оплату…'
+                          : tariff.id === 'one_time'
+                            ? 'Начать разбор'
+                            : 'Оформить подписку'}
+                      {!current && payingId !== tariff.id && <Icon name="ArrowRight" size={18} />}
+                    </button>
+                  )}
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      <ChatDialog open={chatOpen} onOpenChange={setChatOpen} />
     </section>
   );
 };
