@@ -53,6 +53,7 @@ interface StartFlowPanelProps {
   aiResult: string;
   reset: () => void;
   openHistory: () => void;
+  openChat: () => void;
 }
 
 const StartFlowPanel = ({
@@ -104,6 +105,7 @@ const StartFlowPanel = ({
   aiResult,
   reset,
   openHistory,
+  openChat,
 }: StartFlowPanelProps) => {
   return (
     <>
@@ -216,7 +218,12 @@ const StartFlowPanel = ({
         )}
 
         {step === 'done' && (
-          <DoneStep aiResult={aiResult} reset={reset} openHistory={openHistory} />
+          <DoneStep
+            aiResult={aiResult}
+            reset={reset}
+            openHistory={openHistory}
+            openChat={openChat}
+          />
         )}
       </div>
     </>

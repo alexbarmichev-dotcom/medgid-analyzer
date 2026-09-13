@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import HistoryDialog from '@/components/site/start-flow/HistoryDialog';
 import StartFlowPanel from '@/components/site/start-flow/StartFlowPanel';
+import ChatDialog from '@/components/site/start-flow/ChatDialog';
 import { useStartFlow } from '@/components/site/start-flow/useStartFlow';
 
 const StartFlow = () => {
+  const [chatOpen, setChatOpen] = useState(false);
   const {
     step,
     setStep,
@@ -128,6 +131,7 @@ const StartFlow = () => {
           aiResult={aiResult}
           reset={reset}
           openHistory={openHistory}
+          openChat={() => setChatOpen(true)}
         />
       </div>
 
@@ -137,6 +141,8 @@ const StartFlow = () => {
         history={history}
         historyLoading={historyLoading}
       />
+
+      <ChatDialog open={chatOpen} onOpenChange={setChatOpen} />
     </section>
   );
 };

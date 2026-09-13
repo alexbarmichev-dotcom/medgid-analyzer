@@ -66,9 +66,10 @@ interface DoneStepProps {
   aiResult: string;
   reset: () => void;
   openHistory: () => void;
+  openChat: () => void;
 }
 
-export const DoneStep = ({ aiResult, reset, openHistory }: DoneStepProps) => {
+export const DoneStep = ({ aiResult, reset, openHistory, openChat }: DoneStepProps) => {
   const [downloading, setDownloading] = useState(false);
 
   const handleDownload = async () => {
@@ -143,6 +144,13 @@ export const DoneStep = ({ aiResult, reset, openHistory }: DoneStepProps) => {
             Ваша медицинская история
           </button>
         </div>
+        <button
+          onClick={openChat}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius)] border border-hand/30 bg-background px-6 py-3.5 text-sm font-semibold text-hand transition-transform hover:-translate-y-0.5 sm:w-auto sm:mx-auto"
+        >
+          <Icon name="MessageCircle" size={18} />
+          Задать вопрос по анализам в AI-чате
+        </button>
       </div>
     </div>
   );
