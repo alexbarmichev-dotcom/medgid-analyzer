@@ -233,7 +233,7 @@ const Pricing = () => {
                       </>
                     ) : tariff.id === 'one_time' ? (
                       <>
-                        <p className="mt-4 inline-flex items-center gap-2 rounded-xl bg-hand/12 px-4 py-2.5 text-sm font-medium text-hand">
+                        <p className="mt-4 inline-flex items-center gap-2 rounded-xl bg-hand/12 px-4 py-2.5 text-hand text-lg font-bold">
                           <Icon name="Unlock" size={16} />
                           Доступ свободный — без email и регистрации
                         </p>
