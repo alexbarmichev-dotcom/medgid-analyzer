@@ -62,7 +62,7 @@ const Features = () => {
                 <Icon name={f.icon} size={24} />
               </span>
               <h3 className="mt-5 font-head text-lg font-bold leading-snug">{f.title}</h3>
-              <p className="mt-3 whitespace-pre-line text-[0.95rem] leading-relaxed text-ink-soft">
+              <p className="mt-3 whitespace-pre-line text-[0.95rem] leading-relaxed text-ink-soft font-medium">
                 {f.text}
               </p>
             </div>
