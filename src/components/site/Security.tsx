@@ -30,32 +30,32 @@ const Security = () => {
         className="paper-lines pointer-events-none absolute inset-0 opacity-[0.06]"
         aria-hidden
       />
-      <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-12 px-5 py-20 md:px-8 lg:grid-cols-2">
+      <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-8 px-5 py-10 md:px-8 lg:grid-cols-2">
         <div>
-          <span className="mb-4 inline-flex items-center gap-2.5 rounded-full bg-accent/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary-foreground">
-            <Icon name="ShieldCheck" size={15} />
+          <span className="mb-3 inline-flex items-center gap-2 rounded-full bg-accent/20 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground">
+            <Icon name="ShieldCheck" size={13} />
             Соответствие 152-ФЗ
           </span>
-          <h2 className="font-head text-3xl font-extrabold leading-tight tracking-[-0.03em] sm:text-4xl">
+          <h2 className="font-head text-xl font-extrabold leading-tight tracking-[-0.02em] sm:text-2xl">
             Ваши данные под надёжной защитой
           </h2>
-          <p className="mt-5 max-w-md text-lg leading-relaxed text-primary-foreground/70">
+          <p className="mt-2 max-w-md text-sm leading-relaxed text-primary-foreground/70">
             Мы построили сервис так, чтобы вы могли доверять ему свои анализы, ничего не рассказывая
             о себе лишнего.
           </p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2">
           {POINTS.map((p) => (
             <div
               key={p.title}
-              className="rounded-2xl border border-primary-foreground/10 bg-primary-foreground/[0.04] p-6"
+              className="rounded-xl border border-primary-foreground/10 bg-primary-foreground/[0.04] p-4"
             >
-              <span className="grid h-11 w-11 place-items-center rounded-xl bg-hand/20 text-primary-foreground">
-                <Icon name={p.icon} size={22} />
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-hand/20 text-primary-foreground">
+                <Icon name={p.icon} size={16} />
               </span>
-              <h3 className="mt-4 font-head text-base font-bold">{p.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-primary-foreground/65">{p.text}</p>
+              <h3 className="mt-2 font-head text-sm font-bold">{p.title}</h3>
+              <p className="mt-1 text-xs leading-relaxed text-primary-foreground/65">{p.text}</p>
             </div>
           ))}
         </div>
