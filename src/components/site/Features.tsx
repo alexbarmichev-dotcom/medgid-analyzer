@@ -80,7 +80,7 @@ const Features = () => {
             </h3>
           </div>
 
-          <p className="mt-5 max-w-2xl text-[0.95rem] leading-relaxed text-ink-soft font-bold">
+          <p className="max-w-2xl text-[0.95rem] leading-relaxed text-ink-soft font-bold mx-0 my-2.5 px-[33px] py-[1px] text-center">
             Одна цифра в бланке — просто число. Ряд цифр во времени — история вашего здоровья.
           </p>
 
