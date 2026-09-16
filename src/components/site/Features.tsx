@@ -27,12 +27,13 @@ const FEATURES = [
     text: 'Сервис хранит историю исследований, строит графики динамики и поддерживает умный поиск: «Как менялся холестерин, с тех пор как я начал бегать?». Отчёты можно экспортировать в PDF.',
     wide: true,
   },
-  {
-    icon: 'HeartPulse',
-    title: 'Почему стоит разбирать анализы регулярно',
-    text: 'Одна цифра в бланке — просто число.\nРяд цифр во времени — история вашего здоровья.\n\n✅ Замечайте отклонения раньше, чем они станут проблемой\n✅ Понимайте свои показатели без медицинских терминов\n✅ Задавайте врачу точные вопросы, а не гадайте\n✅ Отслеживайте динамику, а не разовый снимок\n\nИИ-разбор — это не замена врачу, а помощник, который всегда рядом: расшифрует анализ за секунды, покажет тренды и подскажет, на что обратить внимание.\n\nВаше здоровье — не тайна за семью печатями. Разберитесь в нём.',
-    wide: true,
-  },
+];
+
+const WHY_POINTS = [
+  { icon: 'TrendingUp', text: 'Замечайте отклонения раньше, чем они станут проблемой' },
+  { icon: 'BookOpenCheck', text: 'Понимайте свои показатели без медицинских терминов' },
+  { icon: 'MessagesSquare', text: 'Задавайте врачу точные вопросы, а не гадайте' },
+  { icon: 'Activity', text: 'Отслеживайте динамику, а не разовый снимок' },
 ];
 
 const Features = () => {
@@ -67,6 +68,40 @@ const Features = () => {
               </p>
             </div>
           ))}
+        </div>
+
+        <div className="mt-8 rounded-3xl border border-border bg-card p-7 md:p-10">
+          <div className="flex items-center gap-4">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-hand/10 text-hand">
+              <Icon name="HeartPulse" size={24} />
+            </span>
+            <h3 className="font-head text-xl font-bold leading-snug sm:text-2xl">
+              Почему стоит разбирать анализы регулярно
+            </h3>
+          </div>
+
+          <p className="mt-5 max-w-2xl text-[0.95rem] leading-relaxed text-ink-soft font-bold">
+            Одна цифра в бланке — просто число. Ряд цифр во времени — история вашего здоровья.
+          </p>
+
+          <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {WHY_POINTS.map((p) => (
+              <div key={p.text} className="rounded-2xl bg-muted/50 p-5 text-center">
+                <span className="mx-auto grid h-10 w-10 place-items-center rounded-xl bg-hand/10 text-hand">
+                  <Icon name={p.icon} size={20} />
+                </span>
+                <p className="mt-3 text-sm leading-relaxed text-ink-soft font-bold">{p.text}</p>
+              </div>
+            ))}
+          </div>
+
+          <p className="mt-7 text-[0.95rem] leading-relaxed text-ink-soft font-bold">
+            ИИ-разбор — это не замена врачу, а помощник, который всегда рядом: расшифрует анализ за
+            секунды, покажет тренды и подскажет, на что обратить внимание.
+          </p>
+          <p className="mt-3 font-caveat text-2xl text-hand">
+            Ваше здоровье — не тайна за семью печатями. Разберитесь в нём.
+          </p>
         </div>
       </div>
     </section>
