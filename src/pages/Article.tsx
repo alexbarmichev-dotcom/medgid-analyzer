@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import Icon from '@/components/ui/icon';
 import Header from '@/components/site/Header';
 import Footer from '@/components/site/Footer';
 import { ARTICLES } from '@/data/articles';
@@ -59,6 +60,26 @@ const Article = () => {
           </div>
 
           <p className="mt-10 font-caveat text-2xl text-hand">{article.author}</p>
+
+          <div className="mt-12 rounded-3xl border-2 border-accent/25 bg-card p-7 text-center md:p-10">
+            <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-hand/10 text-hand">
+              <Icon name="FileSearch" size={24} />
+            </span>
+            <h2 className="mt-4 font-head text-xl font-bold sm:text-2xl">
+              Придите к врачу подготовленным
+            </h2>
+            <p className="mx-auto mt-3 max-w-md text-[0.95rem] leading-relaxed text-ink-soft">
+              Загрузите фото анализа — получите понятный разбор показателей и список вопросов для
+              врача за пару минут.
+            </p>
+            <Link
+              to="/#start"
+              className="mt-6 inline-flex items-center gap-2 rounded-[var(--radius)] bg-hand px-6 py-3.5 text-base font-semibold text-accent-foreground transition-transform hover:-translate-y-0.5"
+            >
+              Расшифровать свой анализ
+              <Icon name="ArrowRight" size={18} />
+            </Link>
+          </div>
 
           <Link
             to="/"

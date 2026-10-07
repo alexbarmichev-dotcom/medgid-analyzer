@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import Header from '@/components/site/Header';
 import Hero from '@/components/site/Hero';
 import Testimonial from '@/components/site/Testimonial';
@@ -13,6 +15,16 @@ import Feedback from '@/components/site/Feedback';
 import Footer from '@/components/site/Footer';
 
 const Index = () => {
+  const { hash } = useLocation();
+
+  useEffect(() => {
+    if (!hash) return;
+    const timer = setTimeout(() => {
+      document.querySelector(hash)?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [hash]);
+
   return (
     <div className="min-h-screen bg-background font-body text-foreground">
       <Header />
