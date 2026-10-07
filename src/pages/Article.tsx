@@ -8,6 +8,11 @@ import { ARTICLES } from '@/data/articles';
 const Article = () => {
   const { slug } = useParams();
   const article = ARTICLES.find((a) => a.slug === slug);
+  const related = ARTICLES.filter((a) => a.slug !== slug).slice(0, 4);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [slug]);
 
   useEffect(() => {
     if (!article) return;
@@ -80,6 +85,37 @@ const Article = () => {
               <Icon name="ArrowRight" size={18} />
             </Link>
           </div>
+
+          {related.length > 0 && (
+            <section className="mt-14">
+              <h2 className="mb-5 font-head text-xl font-bold sm:text-2xl">Читайте также</h2>
+              <div className="grid gap-5 sm:grid-cols-2">
+                {related.map((a) => (
+                  <Link
+                    key={a.slug}
+                    to={`/articles/${a.slug}`}
+                    className="group flex flex-col rounded-3xl border border-border bg-card p-6 transition-transform hover:-translate-y-1"
+                  >
+                    <span className="grid h-10 w-10 place-items-center rounded-xl bg-hand/10 text-hand">
+                      <Icon name="BookOpen" size={20} />
+                    </span>
+                    <h3 className="mt-4 font-head text-base font-bold leading-snug">{a.title}</h3>
+                    <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-ink-soft">
+                      {a.excerpt}
+                    </p>
+                    <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-accent">
+                      Читать
+                      <Icon
+                        name="ArrowRight"
+                        size={16}
+                        className="transition-transform group-hover:translate-x-1"
+                      />
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
 
           <Link
             to="/"
