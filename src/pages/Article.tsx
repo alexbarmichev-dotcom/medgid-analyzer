@@ -58,6 +58,14 @@ const Article = () => {
             {article.title}
           </h1>
 
+          {article.cover && (
+            <img
+              src={article.cover}
+              alt={article.title}
+              className="mt-8 aspect-[16/9] w-full rounded-3xl object-cover"
+            />
+          )}
+
           <div className="mt-8 space-y-5 text-[1.05rem] leading-relaxed text-ink-soft">
             {article.paragraphs.map((p, i) => (
               <p key={i}>{p}</p>
@@ -94,16 +102,24 @@ const Article = () => {
                   <Link
                     key={a.slug}
                     to={`/articles/${a.slug}`}
-                    className="group flex flex-col rounded-3xl border border-border bg-card p-6 transition-transform hover:-translate-y-1"
+                    className="group flex flex-col overflow-hidden rounded-3xl border border-border bg-card transition-transform hover:-translate-y-1"
                   >
-                    <span className="grid h-10 w-10 place-items-center rounded-xl bg-hand/10 text-hand">
-                      <Icon name="BookOpen" size={20} />
-                    </span>
-                    <h3 className="mt-4 font-head text-base font-bold leading-snug">{a.title}</h3>
+                    {a.cover && (
+                      <div className="aspect-[16/9] overflow-hidden">
+                        <img
+                          src={a.cover}
+                          alt={a.title}
+                          loading="lazy"
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      </div>
+                    )}
+                    <div className="flex flex-1 flex-col p-6">
+                    <h3 className="font-head text-base font-bold leading-snug">{a.title}</h3>
                     <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-ink-soft">
                       {a.excerpt}
                     </p>
-                    <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-accent">
+                    <span className="mt-auto inline-flex items-center gap-2 pt-4 text-sm font-semibold text-accent">
                       Читать
                       <Icon
                         name="ArrowRight"
@@ -111,6 +127,7 @@ const Article = () => {
                         className="transition-transform group-hover:translate-x-1"
                       />
                     </span>
+                    </div>
                   </Link>
                 ))}
               </div>
