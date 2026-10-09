@@ -37,6 +37,20 @@
       "expectedStatus": 401
     },
     {
+      "name": "upload_start without auth",
+      "method": "POST",
+      "path": "/?action=upload_start",
+      "body": {"files": [{"name": "a.jpg", "type": "image/jpeg", "size": 100}]},
+      "expectedStatus": 401
+    },
+    {
+      "name": "incomplete without auth",
+      "method": "POST",
+      "path": "/?action=incomplete",
+      "body": {},
+      "expectedStatus": 401
+    },
+    {
       "name": "free without auth",
       "method": "POST",
       "path": "/?action=free",

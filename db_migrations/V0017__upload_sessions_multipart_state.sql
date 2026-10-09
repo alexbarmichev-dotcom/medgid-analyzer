@@ -1,0 +1,1 @@
+ALTER TABLE upload_sessions ADD COLUMN IF NOT EXISTS multipart JSONB NOT NULL DEFAULT '{}'::jsonb;

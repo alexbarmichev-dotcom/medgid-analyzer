@@ -50,6 +50,14 @@ const StartFlow = () => {
     historyOpen,
     setHistoryOpen,
     isFree,
+    uploadProgress,
+    uploadFileIndex,
+    incomplete,
+    incompleteLoading,
+    removeFile,
+    retryIncomplete,
+    checkIncompletePayment,
+    dismissIncomplete,
     authEmailValid,
     sendCode,
     resendCode,
@@ -124,6 +132,10 @@ const StartFlow = () => {
           setEmail={setEmail}
           files={files}
           addFiles={addFiles}
+          removeFile={removeFile}
+          uploadProgress={uploadProgress}
+          uploadFileIndex={uploadFileIndex}
+          hasIncomplete={incomplete.length > 0}
           analyzing={analyzing}
           onSubmit={onSubmit}
           checkingPayment={checkingPayment}
@@ -140,6 +152,11 @@ const StartFlow = () => {
         onOpenChange={setHistoryOpen}
         history={history}
         historyLoading={historyLoading}
+        incomplete={incomplete}
+        incompleteLoading={incompleteLoading}
+        onRetry={retryIncomplete}
+        onCheckPayment={checkIncompletePayment}
+        onDismiss={dismissIncomplete}
       />
 
       <ChatDialog open={chatOpen} onOpenChange={setChatOpen} />

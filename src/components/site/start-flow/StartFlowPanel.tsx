@@ -46,6 +46,10 @@ interface StartFlowPanelProps {
   setEmail: (email: string) => void;
   files: File[];
   addFiles: (list: FileList | null) => void;
+  removeFile: (index: number) => void;
+  uploadProgress: number | null;
+  uploadFileIndex: number;
+  hasIncomplete: boolean;
   analyzing: boolean;
   onSubmit: () => void;
   checkingPayment: boolean;
@@ -98,6 +102,10 @@ const StartFlowPanel = ({
   setEmail,
   files,
   addFiles,
+  removeFile,
+  uploadProgress,
+  uploadFileIndex,
+  hasIncomplete,
   analyzing,
   onSubmit,
   checkingPayment,
@@ -133,6 +141,11 @@ const StartFlowPanel = ({
           >
             <Icon name="FolderLock" size={20} />
             Ваша медицинская история
+            {hasIncomplete && (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                есть незавершённые
+              </span>
+            )}
           </button>
         </div>
       )}
@@ -202,6 +215,9 @@ const StartFlowPanel = ({
             setEmail={setEmail}
             files={files}
             addFiles={addFiles}
+            removeFile={removeFile}
+            uploadProgress={uploadProgress}
+            uploadFileIndex={uploadFileIndex}
             analyzing={analyzing}
             onBack={() => setStep('auth')}
             onSubmit={onSubmit}

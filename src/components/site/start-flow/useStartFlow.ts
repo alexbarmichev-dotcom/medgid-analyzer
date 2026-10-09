@@ -2,13 +2,24 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { EMAIL_RE, LOGIN_RE, PASSWORD_RE } from '@/components/site/start-flow/AuthStep';
 import { HistoryItem } from '@/components/site/start-flow/HistoryDialog';
-import { compressImage, readAsBase64 } from '@/components/site/start-flow/fileHelpers';
+import {
+  ANALYZE_URL,
+  LIMIT_TEXT,
+  MAX_FILES,
+  MAX_TOTAL_BYTES,
+  UploadFailed,
+  abortUpload,
+  formatSize,
+  isAllowedFile,
+  totalSize,
+  uploadFiles,
+} from '@/components/site/start-flow/uploadClient';
+import { IncompleteOrder } from '@/components/site/start-flow/IncompleteOrders';
 import { getDeviceId } from '@/lib/deviceId';
 import { getStoredToken, storeSession } from '@/lib/authStorage';
 import { START_FLOW_EVENT, StartIntentDetail } from '@/lib/startFlowBus';
 
 const AUTH_URL = 'https://functions.poehali.dev/8c1cf8ce-6c17-461b-aec5-95a01638aefa';
-const ANALYZE_URL = 'https://functions.poehali.dev/b4dfdccf-8880-4501-b296-550516223859';
 const HISTORY_URL = 'https://functions.poehali.dev/c6e19e20-72b0-4a41-b317-8eb65ffd4dce';
 
 const POLL_INTERVAL_MS = 3000;
@@ -45,6 +56,11 @@ export const useStartFlow = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [isFree, setIsFree] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadFileIndex, setUploadFileIndex] = useState(0);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [incomplete, setIncomplete] = useState<IncompleteOrder[]>([]);
+  const [incompleteLoading, setIncompleteLoading] = useState(false);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const authEmailValid = EMAIL_RE.test(authEmail.trim());
@@ -71,6 +87,34 @@ export const useStartFlow = () => {
     }
   };
 
+  const loadIncomplete = async () => {
+    const token = getStoredToken();
+    if (!token) return;
+    setIncompleteLoading(true);
+    try {
+      const res = await fetch(`${ANALYZE_URL}?action=incomplete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Authorization': token },
+        body: '{}',
+      });
+      const data = await res.json();
+      if (res.ok) setIncomplete(data.items || []);
+    } catch {
+      /* не критично */
+    } finally {
+      setIncompleteLoading(false);
+    }
+  };
+
+  const requireReupload = (message: string) => {
+    setSessionId(null);
+    setFiles([]);
+    setUploadProgress(null);
+    setStep('form');
+    toast({ title: 'Нужно загрузить анализ заново', description: message });
+    loadIncomplete();
+  };
+
   const performAnonymousLogin = async () => {
     setAnonymousLoading(true);
     try {
@@ -88,6 +132,7 @@ export const useStartFlow = () => {
       setIsFree(Boolean(data.isFree));
       toast({ title: 'Доступ свободный', description: 'Верификация не требуется' });
       loadHistory();
+      loadIncomplete();
       setStep('form');
     } catch {
       toast({ title: 'Ошибка сети, попробуйте ещё раз' });
@@ -175,7 +220,9 @@ export const useStartFlow = () => {
 
       if (data.status === 'canceled') {
         setCheckingPayment(false);
-        toast({ title: 'Оплата отменена', description: 'Попробуйте оплатить ещё раз' });
+        requireReupload(
+          'Оплата не прошла, загруженные файлы удалены. Загрузите анализ ещё раз — данные анкеты сохранены в разделе «Незавершённые заказы».',
+        );
         return;
       }
 
@@ -249,6 +296,7 @@ export const useStartFlow = () => {
     setIsFree(isFreeFlag);
     setEmail((prev) => prev || authEmail.trim());
     loadHistory();
+    loadIncomplete();
     if (intent === 'subscribe') {
       toast({ title: 'Добро пожаловать!', description: 'Теперь нажмите «Оформить подписку»' });
       document.querySelector('#pricing')?.scrollIntoView({ behavior: 'smooth' });
@@ -312,7 +360,35 @@ export const useStartFlow = () => {
     }
   };
 
-  const onSubmit = () => {
+  const startUpload = async (): Promise<string | null> => {
+    const token = getStoredToken() || '';
+    setUploadProgress(0);
+    try {
+      const id = await uploadFiles(
+        token,
+        files,
+        { gender, age, complaints, conditions, meds, email },
+        (percent, index) => {
+          setUploadProgress(percent);
+          setUploadFileIndex(index);
+        },
+      );
+      setSessionId(id);
+      return id;
+    } catch (e) {
+      const err = e instanceof UploadFailed ? e : new UploadFailed('Ошибка сети', true);
+      if (err.reupload) {
+        requireReupload(err.message);
+      } else {
+        toast({ title: err.message });
+      }
+      return null;
+    } finally {
+      setUploadProgress(null);
+    }
+  };
+
+  const onSubmit = async () => {
     if (!gender || !age) {
       toast({ title: 'Укажите пол и возраст' });
       return;
@@ -321,30 +397,44 @@ export const useStartFlow = () => {
       toast({ title: 'Загрузите фото или скан анализа' });
       return;
     }
+    if (files.length > MAX_FILES || totalSize(files) > MAX_TOTAL_BYTES) {
+      toast({ title: 'Слишком много файлов', description: LIMIT_TEXT });
+      return;
+    }
+    if (sessionId && !isFree) {
+      setStep('pay');
+      return;
+    }
+    discardSession();
+    const id = await startUpload();
+    if (!id) return;
     if (isFree) {
-      onFreeAnalyze();
+      onFreeAnalyze(id);
       return;
     }
     setStep('pay');
   };
 
-  const onFreeAnalyze = async () => {
+  const onFreeAnalyze = async (id: string) => {
     setAnalyzing(true);
     try {
-      const compressed = await Promise.all(files.map(compressImage));
-      const uploaded = await Promise.all(compressed.map(readAsBase64));
       const token = getStoredToken() || '';
       const res = await fetch(`${ANALYZE_URL}?action=free`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Authorization': token },
-        body: JSON.stringify({ gender, age, complaints, conditions, meds, email, files: uploaded }),
+        body: JSON.stringify({ sessionId: id }),
       });
       const data = await res.json();
       if (!res.ok) {
-        toast({ title: data.error || 'Не удалось получить расшифровку' });
+        if (data.code === 'reupload_required') {
+          requireReupload(data.error);
+        } else {
+          toast({ title: data.error || 'Не удалось получить расшифровку' });
+        }
         return;
       }
       setAiResult(data.result || '');
+      setSessionId(null);
       toast({ title: 'Расшифровка готова' });
       setStep('done');
       loadHistory();
@@ -356,32 +446,33 @@ export const useStartFlow = () => {
   };
 
   const onPay = async () => {
+    if (!sessionId) {
+      requireReupload('Файлы не найдены — загрузите анализ ещё раз.');
+      return;
+    }
     setAnalyzing(true);
     try {
-      const compressed = await Promise.all(files.map(compressImage));
-      const uploaded = await Promise.all(compressed.map(readAsBase64));
       const token = getStoredToken() || '';
-
       const returnUrl = new URL(window.location.href);
       returnUrl.hash = '';
 
       const res = await fetch(`${ANALYZE_URL}?action=create_payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Authorization': token },
-        body: JSON.stringify({
-          gender,
-          age,
-          complaints,
-          conditions,
-          meds,
-          email,
-          files: uploaded,
-          returnUrl: returnUrl.toString(),
-        }),
+        body: JSON.stringify({ sessionId, returnUrl: returnUrl.toString() }),
       });
       const data = await res.json();
       if (!res.ok) {
-        toast({ title: data.error || 'Не удалось создать платёж' });
+        if (data.code === 'reupload_required') {
+          requireReupload(data.error);
+        } else {
+          toast({ title: data.error || 'Не удалось создать платёж' });
+        }
+        return;
+      }
+
+      if (data.alreadyPaid) {
+        pollPayment(data.paymentId);
         return;
       }
 
@@ -398,14 +489,99 @@ export const useStartFlow = () => {
     }
   };
 
+  const discardSession = () => {
+    if (sessionId) {
+      abortUpload(getStoredToken() || '', sessionId, 'Файлы заменены — загрузка отменена');
+      setSessionId(null);
+    }
+  };
+
   const addFiles = (list: FileList | null) => {
-    if (!list) return;
-    setFiles((prev) => [...prev, ...Array.from(list)]);
+    if (!list || list.length === 0) return;
+    const incoming = Array.from(list);
+    const bad = incoming.filter((f) => !isAllowedFile(f));
+    const good = incoming.filter((f) => isAllowedFile(f));
+    if (bad.length) {
+      toast({
+        title: 'Этот формат не подходит',
+        description: 'Загружайте фото (JPG, PNG, HEIC, WEBP) или PDF',
+      });
+    }
+    if (!good.length) return;
+    const next = [...files, ...good];
+    if (next.length > MAX_FILES) {
+      toast({
+        title: `Можно загрузить не больше ${MAX_FILES} файлов`,
+        description: `Сейчас выбрано ${next.length}. Уберите лишние или выберите меньше.`,
+      });
+      return;
+    }
+    const size = totalSize(next);
+    if (size > MAX_TOTAL_BYTES) {
+      toast({
+        title: 'Общий объём больше 50 МБ',
+        description: `Выбрано ${formatSize(size)}. Уберите часть файлов или сделайте фото поменьше.`,
+      });
+      return;
+    }
+    discardSession();
+    setFiles(next);
+  };
+
+  const removeFile = (index: number) => {
+    discardSession();
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const retryIncomplete = (order: IncompleteOrder) => {
+    setGender(order.gender === 'm' || order.gender === 'f' ? order.gender : '');
+    setAge(order.age ? String(order.age) : '');
+    setComplaints(order.complaints);
+    setConditions(order.conditions);
+    setMeds(order.meds);
+    setEmail(order.email);
+    setFiles([]);
+    setSessionId(null);
+    setHistoryOpen(false);
+    setStep('form');
+    if (order.status !== 'awaiting_payment') {
+      dismissIncomplete(order.id, true);
+    }
+    document.querySelector('#start')?.scrollIntoView({ behavior: 'smooth' });
+    toast({ title: 'Анкета заполнена', description: 'Осталось заново прикрепить фото анализов' });
+  };
+
+  const checkIncompletePayment = (order: IncompleteOrder) => {
+    if (!order.paymentId) return;
+    setHistoryOpen(false);
+    setStep('pay');
+    document.querySelector('#start')?.scrollIntoView({ behavior: 'smooth' });
+    pollPayment(order.paymentId);
+  };
+
+  const dismissIncomplete = async (id: string, silent = false) => {
+    setIncomplete((prev) => prev.filter((o) => o.id !== id));
+    try {
+      const token = getStoredToken() || '';
+      const res = await fetch(`${ANALYZE_URL}?action=dismiss`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Authorization': token },
+        body: JSON.stringify({ sessionId: id }),
+      });
+      if (!res.ok && !silent) {
+        const data = await res.json().catch(() => ({}));
+        toast({ title: data.error || 'Не удалось удалить заказ' });
+        loadIncomplete();
+      }
+    } catch {
+      /* ignore */
+    }
   };
 
   const openHistory = () => {
     setHistoryOpen(true);
     loadHistory();
+    loadIncomplete();
   };
 
   const reset = () => {
@@ -422,6 +598,7 @@ export const useStartFlow = () => {
     setConditions('');
     setMeds('');
     setEmail('');
+    discardSession();
     setFiles([]);
     setAiResult('');
     setHistory([]);
@@ -474,6 +651,14 @@ export const useStartFlow = () => {
     historyOpen,
     setHistoryOpen,
     isFree,
+    uploadProgress,
+    uploadFileIndex,
+    incomplete,
+    incompleteLoading,
+    removeFile,
+    retryIncomplete,
+    checkIncompletePayment,
+    dismissIncomplete,
     authEmailValid,
     sendCode,
     resendCode,

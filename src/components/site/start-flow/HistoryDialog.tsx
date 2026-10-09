@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Icon from '@/components/ui/icon';
 import ReactMarkdown from 'react-markdown';
 import { downloadAnalysisPdf } from '@/lib/pdf';
+import IncompleteOrders, { IncompleteOrder } from '@/components/site/start-flow/IncompleteOrders';
 import {
   Accordion,
   AccordionContent,
@@ -46,9 +47,24 @@ interface HistoryDialogProps {
   onOpenChange: (open: boolean) => void;
   history: HistoryItem[];
   historyLoading: boolean;
+  incomplete: IncompleteOrder[];
+  incompleteLoading: boolean;
+  onRetry: (order: IncompleteOrder) => void;
+  onCheckPayment: (order: IncompleteOrder) => void;
+  onDismiss: (id: string) => void;
 }
 
-const HistoryDialog = ({ open, onOpenChange, history, historyLoading }: HistoryDialogProps) => {
+const HistoryDialog = ({
+  open,
+  onOpenChange,
+  history,
+  historyLoading,
+  incomplete,
+  incompleteLoading,
+  onRetry,
+  onCheckPayment,
+  onDismiss,
+}: HistoryDialogProps) => {
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
   const handleDownload = async (item: HistoryItem) => {
@@ -81,6 +97,18 @@ const HistoryDialog = ({ open, onOpenChange, history, historyLoading }: HistoryD
             вашему логину.
           </DialogDescription>
         </DialogHeader>
+
+        <IncompleteOrders
+          items={incomplete}
+          loading={incompleteLoading}
+          onRetry={onRetry}
+          onCheckPayment={onCheckPayment}
+          onDismiss={onDismiss}
+        />
+
+        {incomplete.length > 0 && (
+          <h3 className="mt-2 font-head text-base font-bold">Готовые расшифровки</h3>
+        )}
 
         {historyLoading && history.length === 0 && (
           <p className="py-6 text-center text-sm text-muted-foreground">Загружаем историю…</p>

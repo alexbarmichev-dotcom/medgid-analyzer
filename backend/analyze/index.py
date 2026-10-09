@@ -12,8 +12,9 @@ from email.mime.text import MIMEText
 from email.header import Header
 from typing import Dict, Any, List, Optional
 
-import boto3
 import psycopg2
+
+import uploads
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -69,49 +70,6 @@ def _verify_token(token: str, secret: str) -> Optional[str]:
         return payload.get("login")
     except Exception:
         return None
-
-
-MAX_FILE_BYTES = 15 * 1024 * 1024  # 15 МБ на файл
-ALLOWED_UPLOAD_MIME = {
-    "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif",
-    "application/pdf",
-}
-
-
-class UploadValidationError(Exception):
-    pass
-
-
-def _upload_files(files: List[Dict[str, Any]]) -> List[Dict[str, str]]:
-    """Загружает base64-файлы в S3 и возвращает список {url, mime}."""
-    s3 = boto3.client(
-        "s3",
-        endpoint_url="https://bucket.poehali.dev",
-        aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
-        aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
-    )
-    uploaded = []
-    for f in files:
-        mime = (f.get("type") or "").split(";")[0].strip().lower()
-        if mime not in ALLOWED_UPLOAD_MIME:
-            raise UploadValidationError("Недопустимый тип файла")
-        try:
-            raw = base64.b64decode(f["data"], validate=True)
-        except Exception:
-            raise UploadValidationError("Не удалось прочитать файл")
-        if len(raw) > MAX_FILE_BYTES:
-            raise UploadValidationError("Файл больше 15 МБ")
-        if not raw:
-            raise UploadValidationError("Пустой файл")
-        ext = {
-            "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp",
-            "image/heic": "heic", "image/heif": "heif", "application/pdf": "pdf",
-        }[mime]
-        key = f"analyses/{uuid.uuid4()}.{ext}"
-        s3.put_object(Bucket="files", Key=key, Body=raw, ContentType=mime)
-        url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{key}"
-        uploaded.append({"url": url, "mime": mime})
-    return uploaded
 
 
 def _call_ai(uploaded: List[Dict[str, str]], gender: str, age: str, complaints: str,
@@ -287,30 +245,47 @@ def _mark_one_time_used(dsn: str, login: str) -> None:
         conn.close()
 
 
+def _load_ready_session(login: str, body: Dict[str, Any]):
+    session_id = str(body.get("sessionId") or "")
+    if not session_id:
+        return None, _resp(400, {"error": "Сначала загрузите файлы анализа"})
+    session = uploads.get_session(session_id, login)
+    if not session:
+        return None, _resp(404, {"error": "Загрузка не найдена"})
+    if session["status"] not in ("ready", "awaiting_payment"):
+        return None, _resp(409, {
+            "error": "Файлы этой загрузки недоступны — загрузите анализ заново",
+            "code": "reupload_required",
+        })
+    if len(session["files"]) != session["file_count"]:
+        uploads.fail_session(session, "failed", "Загрузились не все файлы — файлы удалены")
+        return None, _resp(409, {
+            "error": "Загрузились не все файлы. Мы удалили их — загрузите анализ заново",
+            "code": "reupload_required",
+        })
+    return session, None
+
+
 def _handle_create_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
-    gender = body.get("gender", "")
-    age_raw = body.get("age", "")
-    age = int(age_raw) if str(age_raw).isdigit() else None
-    complaints = body.get("complaints", "")
-    conditions = body.get("conditions", "")
-    meds = body.get("meds", "")
-    email = (body.get("email") or "").strip()[:255] or None
-    if email and not EMAIL_RE.match(email):
-        return _resp(400, {"error": "Введите корректный email"})
-    files = body.get("files") or []
+    session, err = _load_ready_session(login, body)
+    if err:
+        return err
+    gender = session["gender"] or ""
+    age = session["age"]
+    complaints = session["complaints"] or ""
+    conditions = session["conditions"] or ""
+    meds = session["meds"] or ""
+    email = session["email"]
+    uploaded = uploads.session_files_for_ai(session)
     return_url = body.get("returnUrl") or "https://poehali.dev"
 
-    if not files:
-        return _resp(400, {"error": "Загрузите фото или скан анализа"})
-    if len(files) > 6:
-        return _resp(400, {"error": "Слишком много файлов, максимум 6"})
-
-    try:
-        uploaded = _upload_files(files)
-    except UploadValidationError as e:
-        return _resp(400, {"error": str(e)})
-    except Exception:
-        return _resp(502, {"error": "Не удалось загрузить файлы"})
+    if session["status"] == "awaiting_payment" and session["payment_id"]:
+        try:
+            old = _get_payment(session["payment_id"])
+        except Exception:
+            old = {}
+        if old.get("status") in ("succeeded", "waiting_for_capture"):
+            return _resp(200, {"ok": True, "paymentId": session["payment_id"], "alreadyPaid": True})
 
     try:
         payment = _create_payment(login, return_url)
@@ -328,16 +303,18 @@ def _handle_create_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
         with conn.cursor() as cur:
             cur.execute(
                 "INSERT INTO pending_analyses (payment_id, login, gender, age, complaints, "
-                "conditions, meds, files, amount, status, email) VALUES "
-                "(%s, %s, %s, %s, %s, %s, %s::jsonb, %s, 'pending', %s)",
+                "conditions, meds, files, amount, status, email, session_id) VALUES "
+                "(%s, %s, %s, %s, %s, %s, %s::jsonb, %s, 'pending', %s, %s)",
                 (
                     payment_id, login, gender, age, complaints, conditions,
-                    meds, json.dumps(uploaded), PRICE_RUB, email,
+                    meds, json.dumps(uploaded), PRICE_RUB, email, session["id"],
                 ),
             )
         conn.commit()
     finally:
         conn.close()
+
+    uploads.set_status(session["id"], "awaiting_payment", payment_id=payment_id)
 
     return _resp(200, {
         "ok": True,
@@ -366,8 +343,8 @@ def _handle_check_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
                 return _resp(200, {"ok": True, "status": "done", "id": done_row[0], "result": done_row[1]})
 
             cur.execute(
-                "SELECT login, gender, age, complaints, conditions, meds, files, status, email "
-                "FROM pending_analyses WHERE payment_id = %s",
+                "SELECT login, gender, age, complaints, conditions, meds, files, status, email, "
+                "session_id FROM pending_analyses WHERE payment_id = %s",
                 (payment_id,),
             )
             pending = cur.fetchone()
@@ -377,12 +354,13 @@ def _handle_check_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
     if not pending:
         return _resp(404, {"error": "Платёж не найден"})
 
-    p_login, gender, age, complaints, conditions, meds, files_json, p_status, email = pending
+    (p_login, gender, age, complaints, conditions, meds, files_json, p_status, email,
+     session_id) = pending
     if p_login != login:
         return _resp(403, {"error": "Нет доступа к этому платежу"})
 
     if p_status == "canceled":
-        return _resp(200, {"ok": True, "status": "canceled"})
+        return _resp(200, {"ok": True, "status": "canceled", "code": "reupload_required"})
 
     try:
         payment = _get_payment(payment_id)
@@ -403,6 +381,8 @@ def _handle_check_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
             [f["url"] for f in uploaded], ai_result, payment_id, "paid", PRICE_RUB, email,
         )
         _mark_pending(dsn, payment_id, "done")
+        if session_id:
+            uploads.set_status(session_id, "done")
         _mark_one_time_used(dsn, login)
         if email:
             _send_result_email(email, ai_result)
@@ -410,7 +390,12 @@ def _handle_check_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
 
     if yk_status == "canceled":
         _mark_pending(dsn, payment_id, "canceled")
-        return _resp(200, {"ok": True, "status": "canceled"})
+        if session_id:
+            session = uploads.get_session(session_id, login)
+            if session:
+                uploads.fail_session(session, "canceled",
+                                     "Оплата не прошла — файлы удалены, загрузите анализ заново")
+        return _resp(200, {"ok": True, "status": "canceled", "code": "reupload_required"})
 
     return _resp(200, {"ok": True, "status": "pending"})
 
@@ -420,28 +405,17 @@ def _handle_free_analysis(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
     if not _is_user_free(dsn, login):
         return _resp(403, {"error": "Бесплатный доступ недоступен для этого аккаунта"})
 
-    gender = body.get("gender", "")
-    age_raw = body.get("age", "")
-    age = int(age_raw) if str(age_raw).isdigit() else None
-    complaints = body.get("complaints", "")
-    conditions = body.get("conditions", "")
-    meds = body.get("meds", "")
-    email = (body.get("email") or "").strip()[:255] or None
-    if email and not EMAIL_RE.match(email):
-        return _resp(400, {"error": "Введите корректный email"})
-    files = body.get("files") or []
-
-    if not files:
-        return _resp(400, {"error": "Загрузите фото или скан анализа"})
-    if len(files) > 6:
-        return _resp(400, {"error": "Слишком много файлов, максимум 6"})
-
-    try:
-        uploaded = _upload_files(files)
-    except UploadValidationError as e:
-        return _resp(400, {"error": str(e)})
-    except Exception:
-        return _resp(502, {"error": "Не удалось загрузить файлы"})
+    session, err = _load_ready_session(login, body)
+    if err:
+        return err
+    gender = session["gender"] or ""
+    age = session["age"]
+    age_raw = str(age or "")
+    complaints = session["complaints"] or ""
+    conditions = session["conditions"] or ""
+    meds = session["meds"] or ""
+    email = session["email"]
+    uploaded = uploads.session_files_for_ai(session)
 
     try:
         ai_result = _call_ai(uploaded, gender, age_raw, complaints, conditions, meds)
@@ -458,10 +432,91 @@ def _handle_free_analysis(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
     except Exception:
         analysis_id = None
 
+    uploads.set_status(session["id"], "done")
+
     if email:
         _send_result_email(email, ai_result)
 
     return _resp(200, {"ok": True, "id": analysis_id, "result": ai_result})
+
+
+def _handle_upload_start(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
+    email = (body.get("email") or "").strip()[:255] or None
+    if email and not EMAIL_RE.match(email):
+        return _resp(400, {"error": "Введите корректный email"})
+    body["email"] = email
+    try:
+        session_id, info = uploads.start_session(login, body)
+    except uploads.UploadError as e:
+        return _resp(400, {"error": str(e), "code": e.code})
+    return _resp(200, {"ok": True, "sessionId": session_id, **info})
+
+
+def _handle_upload_chunk(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
+    session = uploads.get_session(str(body.get("sessionId") or ""), login)
+    if not session:
+        return _resp(404, {"error": "Загрузка не найдена", "code": "reupload_required"})
+    try:
+        result = uploads.upload_chunk(session, body)
+    except uploads.UploadError as e:
+        if e.code == "session_closed":
+            return _resp(409, {"error": str(e), "code": "reupload_required"})
+        fresh = uploads.get_session(session["id"], login) or session
+        uploads.fail_session(fresh, "failed", f"{e} — файлы удалены, загрузите анализ заново")
+        return _resp(400, {"error": f"{e}. Загруженные файлы удалены — повторите загрузку",
+                           "code": "reupload_required"})
+    except Exception as e:
+        print(f"upload_chunk failed: {type(e).__name__}: {e}")
+        fresh = uploads.get_session(session["id"], login) or session
+        uploads.fail_session(fresh, "failed", "Сбой загрузки — файлы удалены, загрузите анализ заново")
+        return _resp(502, {"error": "Не удалось загрузить файл. Загруженные файлы удалены — "
+                                    "повторите загрузку", "code": "reupload_required"})
+    return _resp(200, {"ok": True, **result})
+
+
+def _handle_upload_abort(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
+    session = uploads.get_session(str(body.get("sessionId") or ""), login)
+    if not session:
+        return _resp(200, {"ok": True})
+    if session["status"] in ("uploading", "ready", "failed", "canceled"):
+        uploads.fail_session(session, "failed",
+                             body.get("reason") or "Загрузка прервана — файлы удалены")
+    return _resp(200, {"ok": True})
+
+
+def _refresh_awaiting(login: str, items: List[Dict[str, Any]]) -> bool:
+    """Сверяет с ЮKassa заказы, ожидающие оплаты; отменённые — очищает."""
+    changed = False
+    for item in [i for i in items if i["status"] == "awaiting_payment" and i["paymentId"]][:5]:
+        try:
+            yk_status = _get_payment(item["paymentId"]).get("status")
+        except Exception:
+            continue
+        if yk_status == "canceled":
+            _mark_pending(os.environ["DATABASE_URL"], item["paymentId"], "canceled")
+            session = uploads.get_session(item["id"], login)
+            if session:
+                uploads.fail_session(session, "canceled",
+                                     "Оплата не прошла — файлы удалены, загрузите анализ заново")
+            changed = True
+    return changed
+
+
+def _handle_incomplete(login: str) -> Dict[str, Any]:
+    items = uploads.list_incomplete(login)
+    if _refresh_awaiting(login, items):
+        items = uploads.list_incomplete(login)
+    return _resp(200, {"ok": True, "items": items})
+
+
+def _handle_dismiss(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
+    session = uploads.get_session(str(body.get("sessionId") or ""), login)
+    if not session:
+        return _resp(200, {"ok": True})
+    if session["status"] == "awaiting_payment":
+        return _resp(409, {"error": "Заказ ожидает подтверждения оплаты — его нельзя удалить"})
+    uploads.fail_session(session, "dismissed", "Удалено пользователем")
+    return _resp(200, {"ok": True})
 
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -471,9 +526,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     создаёт платёж и сохраняет заявку на разбор; check_payment — проверяет статус оплаты, при успехе
     запускает ИИ-расшифровку (Claude через Polza AI) и сохраняет результат; free — прямой
     бесплатный разбор для аккаунтов с флагом is_free (минуя оплату).
+    Загрузка файлов идёт по частям: upload_start (проверка лимита 12 файлов / 50 МБ),
+    upload_chunk (часть файла до 2 МБ), upload_abort (удаление файлов при ошибке), incomplete
+    (незавершённые заказы для кабинета), dismiss (удалить незавершённый заказ).
     Args: event с httpMethod, queryStringParameters.action, headers.X-Authorization (токен
-          логина), body {gender, age, complaints, conditions, meds, files, returnUrl} для
-          create_payment/free, body {paymentId} для check_payment
+          логина), body {sessionId, returnUrl} для create_payment/free, body {paymentId} для
+          check_payment
     Returns: HTTP-ответ со статусом платежа/расшифровкой или ссылкой на оплату ЮKassa
     """
     method = event.get("httpMethod", "POST")
@@ -494,6 +552,18 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         body = json.loads(event.get("body") or "{}")
     except Exception:
         return _resp(400, {"error": "Некорректный запрос"})
+
+    upload_actions = {
+        "upload_start": lambda: _handle_upload_start(login, body),
+        "upload_chunk": lambda: _handle_upload_chunk(login, body),
+        "upload_abort": lambda: _handle_upload_abort(login, body),
+        "incomplete": lambda: _handle_incomplete(login),
+        "dismiss": lambda: _handle_dismiss(login, body),
+    }
+    if action in upload_actions:
+        if not login:
+            return _resp(401, {"error": "Требуется вход в личный кабинет"})
+        return upload_actions[action]()
 
     if action == "create_payment":
         if not login:
