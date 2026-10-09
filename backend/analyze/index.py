@@ -306,7 +306,7 @@ def _handle_create_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
             cur.execute(
                 "INSERT INTO pending_analyses (payment_id, login, gender, age, complaints, "
                 "conditions, meds, files, amount, status, email, session_id) VALUES "
-                "(%s, %s, %s, %s, %s, %s, %s::jsonb, %s, 'pending', %s, %s)",
+                "(%s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, 'pending', %s, %s)",
                 (
                     payment_id, login, gender, age, complaints, conditions,
                     meds, json.dumps(uploaded), PRICE_RUB, email, session["id"],
