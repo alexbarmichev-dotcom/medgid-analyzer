@@ -9,6 +9,7 @@ import {
   MAX_TOTAL_BYTES,
   UploadFailed,
   abortUpload,
+  fetchResume,
   formatSize,
   isAllowedFile,
   totalSize,
@@ -61,6 +62,7 @@ export const useStartFlow = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [incomplete, setIncomplete] = useState<IncompleteOrder[]>([]);
   const [incompleteLoading, setIncompleteLoading] = useState(false);
+  const [resumeOf, setResumeOf] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const authEmailValid = EMAIL_RE.test(authEmail.trim());
@@ -160,6 +162,45 @@ export const useStartFlow = () => {
     };
     window.addEventListener(START_FLOW_EVENT, onIntent);
     return () => window.removeEventListener(START_FLOW_EVENT, onIntent);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // возврат по ссылке из письма: подставляем анкету, клиенту остаётся прикрепить файлы
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const resumeId = params.get('resume');
+    if (!resumeId) return;
+    params.delete('resume');
+    const query = params.toString();
+    window.history.replaceState(
+      null,
+      '',
+      `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`,
+    );
+    fetchResume(resumeId).then((data) => {
+      setTimeout(() => document.querySelector('#start')?.scrollIntoView({ behavior: 'smooth' }), 300);
+      if (!data) {
+        toast({ title: 'Ссылка устарела', description: 'Заполните анкету и загрузите анализ заново' });
+        return;
+      }
+      setGender(data.gender === 'm' || data.gender === 'f' ? data.gender : '');
+      setAge(data.age ? String(data.age) : '');
+      setComplaints(data.complaints);
+      setConditions(data.conditions);
+      setMeds(data.meds);
+      setEmail(data.email);
+      setResumeOf(resumeId);
+      if (getStoredToken()) {
+        setStep('form');
+        loadIncomplete();
+        toast({ title: 'Анкета восстановлена', description: 'Осталось заново прикрепить фото анализов' });
+      } else {
+        toast({
+          title: 'Анкета восстановлена',
+          description: 'Войдите в кабинет и заново прикрепите фото анализов',
+        });
+      }
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -372,8 +413,10 @@ export const useStartFlow = () => {
           setUploadProgress(percent);
           setUploadFileIndex(index);
         },
+        resumeOf,
       );
       setSessionId(id);
+      setResumeOf(null);
       return id;
     } catch (e) {
       const err = e instanceof UploadFailed ? e : new UploadFailed('Ошибка сети', true);
@@ -544,7 +587,9 @@ export const useStartFlow = () => {
     setSessionId(null);
     setHistoryOpen(false);
     setStep('form');
-    if (order.status !== 'awaiting_payment') {
+    if (order.status === 'failed' || order.status === 'canceled') {
+      setResumeOf(order.id);
+    } else if (order.status !== 'awaiting_payment') {
       dismissIncomplete(order.id, true);
     }
     document.querySelector('#start')?.scrollIntoView({ behavior: 'smooth' });

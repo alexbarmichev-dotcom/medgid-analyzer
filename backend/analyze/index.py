@@ -258,7 +258,8 @@ def _load_ready_session(login: str, body: Dict[str, Any]):
             "code": "reupload_required",
         })
     if len(session["files"]) != session["file_count"]:
-        uploads.fail_session(session, "failed", "Загрузились не все файлы — файлы удалены")
+        uploads.fail_session(session, "failed", "Загрузились не все файлы — файлы удалены",
+                             notify=True)
         return None, _resp(409, {
             "error": "Загрузились не все файлы. Мы удалили их — загрузите анализ заново",
             "code": "reupload_required",
@@ -394,7 +395,8 @@ def _handle_check_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
             session = uploads.get_session(session_id, login)
             if session:
                 uploads.fail_session(session, "canceled",
-                                     "Оплата не прошла — файлы удалены, загрузите анализ заново")
+                                     "Оплата не прошла — файлы удалены, загрузите анализ заново",
+                                     notify=True)
         return _resp(200, {"ok": True, "status": "canceled", "code": "reupload_required"})
 
     return _resp(200, {"ok": True, "status": "pending"})
@@ -462,13 +464,15 @@ def _handle_upload_chunk(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
         if e.code == "session_closed":
             return _resp(409, {"error": str(e), "code": "reupload_required"})
         fresh = uploads.get_session(session["id"], login) or session
-        uploads.fail_session(fresh, "failed", f"{e} — файлы удалены, загрузите анализ заново")
+        uploads.fail_session(fresh, "failed", f"{e} — файлы удалены, загрузите анализ заново",
+                             notify=True)
         return _resp(400, {"error": f"{e}. Загруженные файлы удалены — повторите загрузку",
                            "code": "reupload_required"})
     except Exception as e:
         print(f"upload_chunk failed: {type(e).__name__}: {e}")
         fresh = uploads.get_session(session["id"], login) or session
-        uploads.fail_session(fresh, "failed", "Сбой загрузки — файлы удалены, загрузите анализ заново")
+        uploads.fail_session(fresh, "failed", "Сбой загрузки — файлы удалены, загрузите анализ заново",
+                             notify=True)
         return _resp(502, {"error": "Не удалось загрузить файл. Загруженные файлы удалены — "
                                     "повторите загрузку", "code": "reupload_required"})
     return _resp(200, {"ok": True, **result})
@@ -480,7 +484,8 @@ def _handle_upload_abort(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
         return _resp(200, {"ok": True})
     if session["status"] in ("uploading", "ready", "failed", "canceled"):
         uploads.fail_session(session, "failed",
-                             body.get("reason") or "Загрузка прервана — файлы удалены")
+                             str(body.get("reason") or "Загрузка прервана — файлы удалены")[:200],
+                             notify=bool(body.get("notify")))
     return _resp(200, {"ok": True})
 
 
@@ -497,7 +502,8 @@ def _refresh_awaiting(login: str, items: List[Dict[str, Any]]) -> bool:
             session = uploads.get_session(item["id"], login)
             if session:
                 uploads.fail_session(session, "canceled",
-                                     "Оплата не прошла — файлы удалены, загрузите анализ заново")
+                                     "Оплата не прошла — файлы удалены, загрузите анализ заново",
+                                     notify=True)
             changed = True
     return changed
 
@@ -507,6 +513,14 @@ def _handle_incomplete(login: str) -> Dict[str, Any]:
     if _refresh_awaiting(login, items):
         items = uploads.list_incomplete(login)
     return _resp(200, {"ok": True, "items": items})
+
+
+def _handle_resume(body: Dict[str, Any]) -> Dict[str, Any]:
+    data = uploads.get_resume_data(str(body.get("sessionId") or "")[:36])
+    if not data or data["status"] not in ("failed", "canceled"):
+        return _resp(404, {"error": "Ссылка устарела — заполните анкету заново"})
+    data.pop("status")
+    return _resp(200, {"ok": True, **data})
 
 
 def _handle_dismiss(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
@@ -552,6 +566,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         body = json.loads(event.get("body") or "{}")
     except Exception:
         return _resp(400, {"error": "Некорректный запрос"})
+
+    if action == "resume":
+        return _handle_resume(body)
 
     upload_actions = {
         "upload_start": lambda: _handle_upload_start(login, body),

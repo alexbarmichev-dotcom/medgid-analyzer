@@ -61,8 +61,13 @@ const post = async (action: string, token: string, body: unknown) => {
   return { ok: res.ok, data };
 };
 
-export const abortUpload = (token: string, sessionId: string, reason?: string) =>
-  post('upload_abort', token, { sessionId, reason }).catch(() => undefined);
+export const abortUpload = (token: string, sessionId: string, reason?: string, notify = false) =>
+  post('upload_abort', token, { sessionId, reason, notify }).catch(() => undefined);
+
+export const fetchResume = async (sessionId: string) => {
+  const { ok, data } = await post('resume', '', { sessionId });
+  return ok ? (data as UploadProfile & { age: number | null }) : null;
+};
 
 export interface UploadProfile {
   gender: string;
@@ -78,6 +83,7 @@ export const uploadFiles = async (
   files: File[],
   profile: UploadProfile,
   onProgress: (percent: number, fileIndex: number) => void,
+  resumeOf?: string | null,
 ): Promise<string> => {
   onProgress(0, 0);
   const prepared = await Promise.all(files.map(compressImage));
@@ -85,6 +91,8 @@ export const uploadFiles = async (
 
   const start = await post('upload_start', token, {
     ...profile,
+    siteUrl: window.location.origin,
+    resumeOf: resumeOf || undefined,
     files: prepared.map((f, i) => ({ name: f.name, type: types[i], size: f.size })),
   });
   if (!start.ok) {
@@ -121,7 +129,7 @@ export const uploadFiles = async (
       }
     }
   } catch (e) {
-    await abortUpload(token, sessionId, 'Загрузка прервалась — файлы удалены');
+    await abortUpload(token, sessionId, 'Загрузка прервалась — файлы удалены', true);
     if (e instanceof UploadFailed) throw e;
     throw new UploadFailed('Связь прервалась. Загруженные файлы удалены — повторите загрузку', true);
   }

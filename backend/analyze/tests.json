@@ -44,6 +44,13 @@
       "expectedStatus": 401
     },
     {
+      "name": "resume unknown session",
+      "method": "POST",
+      "path": "/?action=resume",
+      "body": {"sessionId": "00000000-0000-0000-0000-000000000000"},
+      "expectedStatus": 404
+    },
+    {
       "name": "incomplete without auth",
       "method": "POST",
       "path": "/?action=incomplete",

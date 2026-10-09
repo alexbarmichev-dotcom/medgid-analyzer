@@ -1,12 +1,15 @@
 import base64
 import json
 import os
+import re
 import tempfile
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
 import boto3
 import psycopg2
+
+import mailer
 
 MAX_FILES = 12
 MAX_TOTAL_BYTES = 50 * 1024 * 1024
@@ -112,7 +115,7 @@ def delete_session_files(session_id: str, files: List[Dict[str, Any]]) -> None:
     _delete_keys(s3_client(), keys)
 
 
-def fail_session(session: Dict[str, Any], status: str, error: str) -> None:
+def fail_session(session: Dict[str, Any], status: str, error: str, notify: bool = False) -> None:
     delete_session_files(session["id"], session["files"])
     conn = _connect()
     try:
@@ -125,6 +128,8 @@ def fail_session(session: Dict[str, Any], status: str, error: str) -> None:
         conn.commit()
     finally:
         conn.close()
+    if notify:
+        mailer.notify_failed(session["id"], status)
 
 
 def start_session(login: str, body: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
@@ -151,8 +156,8 @@ def start_session(login: str, body: Dict[str, Any]) -> Tuple[str, Dict[str, Any]
         with conn.cursor() as cur:
             cur.execute(
                 "INSERT INTO upload_sessions (id, login, status, file_count, declared_bytes, "
-                "gender, age, complaints, conditions, meds, email) VALUES "
-                "(%s, %s, 'uploading', %s, %s, %s, %s, %s, %s, %s, %s)",
+                "gender, age, complaints, conditions, meds, email, site_url) VALUES "
+                "(%s, %s, 'uploading', %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (
                     session_id, login, len(files_meta), total,
                     (body.get("gender") or "")[:1] or None,
@@ -161,12 +166,53 @@ def start_session(login: str, body: Dict[str, Any]) -> Tuple[str, Dict[str, Any]
                     body.get("conditions") or "",
                     body.get("meds") or "",
                     body.get("email"),
+                    _clean_site_url(body.get("siteUrl")),
                 ),
             )
+            resume_of = str(body.get("resumeOf") or "")[:36]
+            if resume_of:
+                cur.execute(
+                    "UPDATE upload_sessions SET status = 'resumed', updated_at = now() "
+                    "WHERE id = %s AND login = %s AND status IN ('failed', 'canceled')",
+                    (resume_of, login),
+                )
         conn.commit()
     finally:
         conn.close()
     return session_id, {"maxChunkBytes": MAX_CHUNK_BYTES}
+
+
+def _clean_site_url(raw: Any) -> Optional[str]:
+    url = str(raw or "").strip()[:200]
+    if not re.match(r"^https?://[A-Za-z0-9.\-]+(:\d+)?$", url):
+        return None
+    return url
+
+
+def get_resume_data(session_id: str) -> Optional[Dict[str, Any]]:
+    """Данные анкеты для повторной загрузки по ссылке из письма (без файлов)."""
+    conn = _connect()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT status, gender, age, complaints, conditions, meds, email "
+                "FROM upload_sessions WHERE id = %s",
+                (session_id,),
+            )
+            row = cur.fetchone()
+    finally:
+        conn.close()
+    if not row:
+        return None
+    return {
+        "status": row[0],
+        "gender": row[1] or "",
+        "age": row[2],
+        "complaints": row[3] or "",
+        "conditions": row[4] or "",
+        "meds": row[5] or "",
+        "email": row[6] or "",
+    }
 
 
 def _load_progress(session_id: str) -> Dict[str, Any]:
@@ -308,7 +354,7 @@ def cleanup_stale(login: str) -> None:
         conn.close()
     for sid, files in rows:
         fail_session({"id": sid, "files": _load_files(files)}, "failed",
-                     "Заказ не был завершён — файлы удалены")
+                     "Заказ не был завершён — файлы удалены", notify=True)
 
 
 def list_incomplete(login: str) -> List[Dict[str, Any]]:
