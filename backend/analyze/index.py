@@ -6,6 +6,7 @@ import hashlib
 import base64
 import uuid
 import smtplib
+import time
 import urllib.request
 import urllib.error
 from email.mime.text import MIMEText
@@ -508,6 +509,55 @@ def _refresh_awaiting(login: str, items: List[Dict[str, Any]]) -> bool:
     return changed
 
 
+CLEANUP_KEY = "upload_cleanup"
+CLEANUP_EVERY_MINUTES = 60
+CLEANUP_TIME_BUDGET_SEC = 3.0
+
+
+def _handle_cleanup() -> Dict[str, Any]:
+    """Фоновая очистка брошенных заказов всех клиентов (не чаще раза в час)."""
+    if not uploads.claim_run(CLEANUP_KEY, CLEANUP_EVERY_MINUTES):
+        return _resp(200, {"ok": True, "skipped": True})
+
+    started = time.monotonic()
+    out_of_time = lambda: time.monotonic() - started > CLEANUP_TIME_BUDGET_SEC
+    cleaned = canceled = 0
+    unfinished = False
+
+    for sid, files in uploads.stale_sessions(10):
+        if out_of_time():
+            unfinished = True
+            break
+        uploads.fail_session({"id": sid, "files": files}, "failed",
+                             "Заказ не был завершён — файлы удалены", notify=True)
+        cleaned += 1
+
+    for session_id, login, payment_id in uploads.stale_awaiting_payments(10):
+        if out_of_time():
+            unfinished = True
+            break
+        try:
+            yk_status = _get_payment(payment_id).get("status")
+        except Exception:
+            continue
+        if yk_status == "canceled":
+            _mark_pending(os.environ["DATABASE_URL"], payment_id, "canceled")
+            session = uploads.get_session(session_id, login)
+            if session:
+                uploads.fail_session(session, "canceled",
+                                     "Оплата не прошла — файлы удалены, загрузите анализ заново",
+                                     notify=True)
+            canceled += 1
+        else:
+            uploads.set_status(session_id, "awaiting_payment")
+
+    if unfinished:
+        uploads.release_run(CLEANUP_KEY)
+
+    return _resp(200, {"ok": True, "cleaned": cleaned, "canceled": canceled,
+                       "unfinished": unfinished})
+
+
 def _handle_incomplete(login: str) -> Dict[str, Any]:
     items = uploads.list_incomplete(login)
     if _refresh_awaiting(login, items):
@@ -569,6 +619,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     if action == "resume":
         return _handle_resume(body)
+
+    if action == "cleanup":
+        return _handle_cleanup()
 
     upload_actions = {
         "upload_start": lambda: _handle_upload_start(login, body),

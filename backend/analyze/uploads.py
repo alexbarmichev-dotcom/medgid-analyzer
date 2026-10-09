@@ -357,6 +357,68 @@ def cleanup_stale(login: str) -> None:
                      "Заказ не был завершён — файлы удалены", notify=True)
 
 
+def claim_run(key: str, minutes: int) -> bool:
+    """Атомарно «забирает» запуск фоновой задачи. True — можно выполнять."""
+    conn = _connect()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE maintenance_state SET last_run = now() WHERE key = %s "
+                f"AND last_run < now() - interval '{int(minutes)} minutes' RETURNING key",
+                (key,),
+            )
+            claimed = cur.fetchone() is not None
+        conn.commit()
+        return claimed
+    finally:
+        conn.close()
+
+
+def release_run(key: str) -> None:
+    """Разрешает следующий запуск сразу — если остались необработанные заказы."""
+    conn = _connect()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE maintenance_state SET last_run = '2000-01-01' WHERE key = %s", (key,))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def stale_sessions(limit: int) -> List[Tuple[str, List[Dict[str, Any]]]]:
+    """Брошенные заказы всех клиентов: недогруженные и неоплаченные."""
+    conn = _connect()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, files FROM upload_sessions WHERE "
+                f"(status = 'uploading' AND updated_at < now() - interval '{STALE_UPLOAD_MINUTES} minutes') "
+                f"OR (status = 'ready' AND updated_at < now() - interval '{STALE_READY_HOURS} hours') "
+                "ORDER BY updated_at LIMIT %s",
+                (limit,),
+            )
+            return [(sid, _load_files(files)) for sid, files in cur.fetchall()]
+    finally:
+        conn.close()
+
+
+def stale_awaiting_payments(limit: int = 20) -> List[Tuple[str, str, str]]:
+    """Заказы, которые ждут оплаты дольше суток: (session_id, login, payment_id)."""
+    conn = _connect()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, login, payment_id FROM upload_sessions "
+                f"WHERE status = 'awaiting_payment' AND payment_id IS NOT NULL "
+                f"AND updated_at < now() - interval '{STALE_READY_HOURS} hours' "
+                "ORDER BY updated_at LIMIT %s",
+                (limit,),
+            )
+            return cur.fetchall()
+    finally:
+        conn.close()
+
+
 def list_incomplete(login: str) -> List[Dict[str, Any]]:
     cleanup_stale(login)
     conn = _connect()

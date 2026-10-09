@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { ANALYZE_URL } from '@/components/site/start-flow/uploadClient';
 import Header from '@/components/site/Header';
 import Hero from '@/components/site/Hero';
 import Testimonial from '@/components/site/Testimonial';
@@ -16,6 +17,18 @@ import Footer from '@/components/site/Footer';
 
 const Index = () => {
   const { hash } = useLocation();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetch(`${ANALYZE_URL}?action=cleanup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+        keepalive: true,
+      }).catch(() => undefined);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (!hash) return;

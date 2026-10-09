@@ -51,6 +51,15 @@
       "expectedStatus": 404
     },
     {
+      "name": "cleanup runs or skips",
+      "method": "POST",
+      "path": "/?action=cleanup",
+      "body": {},
+      "expectedStatus": 200,
+      "expectedBody": {"ok": true},
+      "bodyMatcher": "partial"
+    },
+    {
       "name": "incomplete without auth",
       "method": "POST",
       "path": "/?action=incomplete",
