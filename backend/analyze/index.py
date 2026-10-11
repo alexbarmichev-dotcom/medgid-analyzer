@@ -7,6 +7,7 @@ import base64
 import uuid
 import smtplib
 import time
+from datetime import datetime
 import urllib.request
 import urllib.error
 from email.mime.text import MIMEText
@@ -165,12 +166,26 @@ def _send_result_email(email: str, ai_result: str) -> None:
 
 
 def _is_user_free(dsn: str, login: str) -> bool:
+    """Бесплатный доступ: флаг is_free либо действующая подписка «12 месяцев»."""
     conn = psycopg2.connect(dsn)
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT is_free FROM users WHERE login = %s", (login,))
+            cur.execute(
+                "SELECT is_free, current_tariff_id, tariff_status, tariff_expires_at "
+                "FROM users WHERE login = %s",
+                (login,),
+            )
             row = cur.fetchone()
-            return bool(row and row[0])
+            if not row:
+                return False
+            is_free, tariff_id, status, expires_at = row
+            if is_free:
+                return True
+            return (
+                tariff_id == "sub_12m"
+                and status == "active"
+                and (expires_at is None or expires_at > datetime.utcnow())
+            )
     finally:
         conn.close()
 
@@ -511,7 +526,7 @@ def _refresh_awaiting(login: str, items: List[Dict[str, Any]]) -> bool:
 
 CLEANUP_KEY = "upload_cleanup"
 CLEANUP_EVERY_MINUTES = 60
-CLEANUP_TIME_BUDGET_SEC = 3.0
+CLEANUP_TIME_BUDGET_SEC = 1.0
 
 
 def _handle_cleanup() -> Dict[str, Any]:

@@ -21,6 +21,7 @@ import { getStoredToken, storeSession } from '@/lib/authStorage';
 import { START_FLOW_EVENT, StartIntentDetail } from '@/lib/startFlowBus';
 
 const AUTH_URL = 'https://functions.poehali.dev/8c1cf8ce-6c17-461b-aec5-95a01638aefa';
+const TARIFFS_URL = 'https://functions.poehali.dev/d75f0411-629b-4a8f-9a09-f4ffbcdcec4f';
 const HISTORY_URL = 'https://functions.poehali.dev/c6e19e20-72b0-4a41-b317-8eb65ffd4dce';
 
 const POLL_INTERVAL_MS = 3000;
@@ -105,6 +106,20 @@ export const useStartFlow = () => {
       /* не критично */
     } finally {
       setIncompleteLoading(false);
+    }
+  };
+
+  const checkSubscriber = async (): Promise<boolean> => {
+    const token = getStoredToken();
+    if (!token) return false;
+    try {
+      const res = await fetch(`${TARIFFS_URL}?resource=me`, { headers: { 'X-Authorization': token } });
+      const data = await res.json();
+      const active = res.ok && data.tariffId === 'sub_12m' && data.tariffStatus === 'active';
+      if (active) setIsFree(true);
+      return active;
+    } catch {
+      return false;
     }
   };
 
@@ -336,6 +351,7 @@ export const useStartFlow = () => {
     storeSession(token, login);
     setIsFree(isFreeFlag);
     setEmail((prev) => prev || authEmail.trim());
+    checkSubscriber();
     loadHistory();
     loadIncomplete();
     if (intent === 'subscribe') {
@@ -444,14 +460,15 @@ export const useStartFlow = () => {
       toast({ title: 'Слишком много файлов', description: LIMIT_TEXT });
       return;
     }
-    if (sessionId && !isFree) {
+    const freeAccess = isFree || (await checkSubscriber());
+    if (sessionId && !freeAccess) {
       setStep('pay');
       return;
     }
     discardSession();
     const id = await startUpload();
     if (!id) return;
-    if (isFree) {
+    if (freeAccess) {
       onFreeAnalyze(id);
       return;
     }

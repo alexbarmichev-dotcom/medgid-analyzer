@@ -26,7 +26,7 @@ def _send(to: str, subject: str, html_body: str) -> bool:
     msg["From"] = smtp_login
     msg["To"] = to
     try:
-        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=10) as server:
+        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=3) as server:
             server.login(smtp_login, smtp_password)
             server.sendmail(smtp_login, [to], msg.as_string())
         return True

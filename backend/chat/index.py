@@ -21,8 +21,13 @@ SYSTEM_PROMPT = (
     "Ответь на вопрос по теме разбора анализов клиента. Отвечай как опытный врач, но без "
     "диагнозов. Отвечай вежливо, доброжелательно. Если вопрос не связан с разбором анализов "
     "клиента или медицинской темой в целом — вежливо попроси переформулировать вопрос по теме "
-    "анализов."
+    "анализов. У тебя есть все разборы анализов клиента в хронологии — при вопросах о динамике "
+    "сравнивай показатели между датами и называй даты. Не ставь диагнозов и не назначай лечение, "
+    "при тревожных отклонениях рекомендуй обратиться к врачу."
 )
+MAX_ANALYSES_IN_CONTEXT = 8
+MAX_RESULT_CHARS = 5000
+MAX_HISTORY_MESSAGES = 20
 
 
 def _resp(status: int, body: Dict[str, Any]) -> Dict[str, Any]:
@@ -121,13 +126,15 @@ def _handle_status(dsn: str, login: str) -> Dict[str, Any]:
             limit_row = cur.fetchone()
             limit = limit_row[0] if limit_row and limit_row[0] else 15
             usage = _ensure_chat_period(cur, login, limit)
+            cur.execute("SELECT tariff_expires_at FROM users WHERE login = %s", (login,))
+            subscription_end = cur.fetchone()[0]
         conn.commit()
 
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
                 "SELECT role, content, created_at FROM chat_messages "
-                "WHERE user_login = %s AND created_at >= %s ORDER BY created_at ASC",
-                (login, usage["periodStart"]),
+                "WHERE user_login = %s ORDER BY created_at ASC",
+                (login,),
             )
             messages = [
                 {"role": r["role"], "content": r["content"], "date": r["created_at"].isoformat()}
@@ -141,32 +148,36 @@ def _handle_status(dsn: str, login: str) -> Dict[str, Any]:
         "questionsUsed": usage["questionsUsed"],
         "questionsLimit": usage["questionsLimit"],
         "periodEnd": usage["periodEnd"].isoformat(),
+        "subscriptionEnd": subscription_end.isoformat() if subscription_end else None,
         "messages": messages,
     })
 
 
-def _latest_analysis_context(cur, login: str) -> str:
+def _analysis_context(cur, login: str) -> str:
     cur.execute(
-        "SELECT gender, age, complaints, conditions, meds, ai_result FROM analyses "
-        "WHERE login = %s AND ai_result IS NOT NULL ORDER BY created_at DESC LIMIT 1",
-        (login,),
+        "SELECT created_at, gender, age, complaints, conditions, meds, ai_result FROM analyses "
+        "WHERE login = %s AND ai_result IS NOT NULL ORDER BY created_at DESC LIMIT %s",
+        (login, MAX_ANALYSES_IN_CONTEXT),
     )
-    row = cur.fetchone()
-    if not row:
+    rows = list(reversed(cur.fetchall()))
+    if not rows:
         return "У клиента пока нет сохранённых разборов анализов."
-    gender, age, complaints, conditions, meds, ai_result = row
-    lines = [
-        f"Пол: {'мужской' if gender == 'm' else 'женский' if gender == 'f' else 'не указан'}",
-        f"Возраст: {age or 'не указан'}",
-    ]
-    if complaints:
-        lines.append(f"Жалобы: {complaints}")
-    if conditions:
-        lines.append(f"Сопутствующие заболевания: {conditions}")
-    if meds:
-        lines.append(f"Приём лекарств: {meds}")
-    lines.append("Разбор анализов нейросетью:\n" + (ai_result or ""))
-    return "\n".join(lines)
+    blocks = []
+    for n, (created_at, gender, age, complaints, conditions, meds, ai_result) in enumerate(rows, 1):
+        lines = [
+            f"=== Разбор №{n} от {created_at.strftime('%d.%m.%Y')} ===",
+            f"Пол: {'мужской' if gender == 'm' else 'женский' if gender == 'f' else 'не указан'}",
+            f"Возраст: {age or 'не указан'}",
+        ]
+        if complaints:
+            lines.append(f"Жалобы: {complaints}")
+        if conditions:
+            lines.append(f"Сопутствующие заболевания: {conditions}")
+        if meds:
+            lines.append(f"Приём лекарств: {meds}")
+        lines.append("Разбор анализов нейросетью:\n" + (ai_result or "")[:MAX_RESULT_CHARS])
+        blocks.append("\n".join(lines))
+    return "\n\n".join(blocks)
 
 
 def _call_ai(context: str, history: list, question: str) -> str:
@@ -215,14 +226,14 @@ def _handle_ask(dsn: str, login: str, body: Dict[str, Any]) -> Dict[str, Any]:
                     "error": f"Лимит {usage['questionsLimit']} вопросов в этом периоде исчерпан",
                 })
 
-            context = _latest_analysis_context(cur, login)
+            context = _analysis_context(cur, login)
         conn.commit()
 
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
-                "SELECT role, content FROM chat_messages WHERE user_login = %s "
-                "AND created_at >= %s ORDER BY created_at ASC",
-                (login, usage["periodStart"]),
+                "SELECT role, content FROM (SELECT role, content, created_at FROM chat_messages "
+                "WHERE user_login = %s ORDER BY created_at DESC LIMIT %s) t ORDER BY created_at ASC",
+                (login, MAX_HISTORY_MESSAGES),
             )
             history = [{"role": r["role"], "content": r["content"]} for r in cur.fetchall()]
 
@@ -255,6 +266,7 @@ def _handle_ask(dsn: str, login: str, body: Dict[str, Any]) -> Dict[str, Any]:
         "answer": answer,
         "questionsUsed": usage["questionsUsed"] + 1,
         "questionsLimit": usage["questionsLimit"],
+        "periodEnd": usage["periodEnd"].isoformat(),
     })
 
 

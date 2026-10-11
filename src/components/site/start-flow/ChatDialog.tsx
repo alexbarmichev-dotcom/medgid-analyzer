@@ -25,12 +25,28 @@ interface ChatDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const formatDate = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+
+const daysLeft = (iso: string | null) =>
+  iso ? Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000)) : 0;
+
+const pluralDays = (n: number) => {
+  const m10 = n % 10;
+  const m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'день';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'дня';
+  return 'дней';
+};
+
 const ChatDialog = ({ open, onOpenChange }: ChatDialogProps) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [questionsUsed, setQuestionsUsed] = useState(0);
   const [questionsLimit, setQuestionsLimit] = useState(15);
+  const [periodEnd, setPeriodEnd] = useState<string | null>(null);
+  const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
   const [question, setQuestion] = useState('');
   const [asking, setAsking] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -51,6 +67,8 @@ const ChatDialog = ({ open, onOpenChange }: ChatDialogProps) => {
       setMessages(data.messages || []);
       setQuestionsUsed(data.questionsUsed);
       setQuestionsLimit(data.questionsLimit);
+      setPeriodEnd(data.periodEnd || null);
+      setSubscriptionEnd(data.subscriptionEnd || null);
     } catch {
       setError('Ошибка сети, попробуйте ещё раз');
     } finally {
@@ -96,6 +114,7 @@ const ChatDialog = ({ open, onOpenChange }: ChatDialogProps) => {
       setMessages((prev) => [...prev, { role: 'assistant', content: data.answer }]);
       setQuestionsUsed(data.questionsUsed);
       setQuestionsLimit(data.questionsLimit);
+      if (data.periodEnd) setPeriodEnd(data.periodEnd);
     } catch {
       toast({ title: 'Ошибка сети, попробуйте ещё раз' });
       setMessages((prev) => prev.slice(0, -1));
@@ -135,7 +154,17 @@ const ChatDialog = ({ open, onOpenChange }: ChatDialogProps) => {
                 <Icon name="MessageCircle" size={14} />
                 Осталось вопросов: {remaining} из {questionsLimit}
               </span>
+              {periodEnd && (
+                <span className="text-xs font-normal">обновятся {formatDate(periodEnd)}</span>
+              )}
             </div>
+            {subscriptionEnd && (
+              <div className="flex items-center gap-1.5 rounded-xl bg-muted px-4 py-2.5 text-sm text-foreground">
+                <Icon name="CalendarClock" size={14} />
+                Подписка действует до {formatDate(subscriptionEnd)} — осталось{' '}
+                {daysLeft(subscriptionEnd)} {pluralDays(daysLeft(subscriptionEnd))}
+              </div>
+            )}
 
             <div className="flex-1 space-y-4 overflow-y-auto rounded-2xl border border-border bg-background p-4">
               {messages.length === 0 && (

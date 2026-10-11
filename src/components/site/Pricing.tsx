@@ -25,7 +25,19 @@ interface MyTariff {
   tariffId: string | null;
   tariffStatus: string | null;
   tariffExpiresAt: string | null;
+  chatUsage: { questionsUsed: number; questionsLimit: number; periodEnd: string } | null;
 }
+
+const pluralDays = (n: number) => {
+  const m10 = n % 10;
+  const m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'день';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'дня';
+  return 'дней';
+};
+
+const formatDate = (iso: string) =>
+  new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
 
 const formatPrice = (price: string, durationDays: number | null) => {
   const num = Math.round(parseFloat(price));
@@ -66,6 +78,7 @@ const Pricing = () => {
           tariffId: data.tariffId,
           tariffStatus: data.tariffStatus,
           tariffExpiresAt: data.tariffExpiresAt,
+          chatUsage: data.chatUsage || null,
         });
       }
     } catch {
@@ -274,6 +287,30 @@ const Pricing = () => {
                       </ul>
                     )}
                   </div>
+                  {current && tariff.id === 'sub_12m' && myTariff?.tariffExpiresAt && (
+                    <div className="mt-6 space-y-2 rounded-2xl bg-primary/15 p-4 text-sm font-medium text-accent-foreground">
+                      <p className="flex items-center gap-2">
+                        <Icon name="CalendarClock" size={16} />
+                        {(() => {
+                          const left = Math.max(
+                            0,
+                            Math.ceil((new Date(myTariff.tariffExpiresAt).getTime() - Date.now()) / 86400000),
+                          );
+                          return `Подписка до ${formatDate(myTariff.tariffExpiresAt)} — осталось ${left} ${pluralDays(left)}`;
+                        })()}
+                      </p>
+                      {myTariff.chatUsage && (
+                        <p className="flex items-center gap-2">
+                          <Icon name="MessageCircle" size={16} />
+                          Вопросов осталось: {Math.max(0, myTariff.chatUsage.questionsLimit - myTariff.chatUsage.questionsUsed)} из {myTariff.chatUsage.questionsLimit}, обновятся {formatDate(myTariff.chatUsage.periodEnd)}
+                        </p>
+                      )}
+                      <p className="flex items-center gap-2">
+                        <Icon name="FileText" size={16} />
+                        Расшифровки анализов — без доплаты
+                      </p>
+                    </div>
+                  )}
                   {current && tariff.id === 'sub_12m' ? (
                     <button
                       onClick={() => setChatOpen(true)}
