@@ -1,4 +1,5 @@
 import json
+import re
 import os
 import hmac
 import hashlib
@@ -28,6 +29,7 @@ SYSTEM_PROMPT = (
 MAX_ANALYSES_IN_CONTEXT = 8
 MAX_RESULT_CHARS = 5000
 MAX_HISTORY_MESSAGES = 20
+CHART_RE = re.compile(r"```chart.*?```", re.S)
 
 
 def _resp(status: int, body: Dict[str, Any]) -> Dict[str, Any]:
@@ -175,7 +177,7 @@ def _analysis_context(cur, login: str) -> str:
             lines.append(f"Сопутствующие заболевания: {conditions}")
         if meds:
             lines.append(f"Приём лекарств: {meds}")
-        lines.append("Разбор анализов нейросетью:\n" + (ai_result or "")[:MAX_RESULT_CHARS])
+        lines.append("Разбор анализов нейросетью:\n" + CHART_RE.sub("", ai_result or "")[:MAX_RESULT_CHARS])
         blocks.append("\n".join(lines))
     return "\n\n".join(blocks)
 

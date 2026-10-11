@@ -45,6 +45,77 @@ SYSTEM_PROMPT = (
     "дружелюбен и вежлив. Все ответы давай без диагнозов и жестких интерпретаций."
 )
 
+SUBSCRIBER_PROMPT = (
+    "\n\nКлиент имеет подписку «12 месяцев», поэтому после трёх основных частей добавь ещё две, "
+    "с ТОЧНО такими заголовками:\n"
+    "## ЧАСТЬ 4: Графики динамики показателей\n"
+    "## ЧАСТЬ 5: Сравнительный разбор с прошлыми анализами\n"
+    "ЧАСТЬ 4. Выбери до 6 самых важных показателей (в первую очередь вышедших за норму). Для "
+    "каждого дай одну короткую строку-пояснение и сразу под ней блок данных для графика строго в "
+    "таком виде (тройные обратные кавычки, слово chart, внутри один валидный JSON без комментариев):\n"
+    "```chart\n"
+    "{\"title\": \"Гемоглобин\", \"unit\": \"г/л\", \"min\": 120, \"max\": 160, "
+    "\"points\": [{\"date\": \"12.03.2026\", \"value\": 128}, {\"date\": \"20.09.2026\", \"value\": 135}]}\n"
+    "```\n"
+    "Правила для графиков: числа только с точкой как десятичным разделителем, без единиц внутри "
+    "числа; min и max — границы нормы с учётом возраста и пола (если их нельзя определить, "
+    "поставь null); точки по возрастанию даты в формате ДД.ММ.ГГГГ; в points включай значение из "
+    "текущих анализов (дата — сегодняшняя, она указана ниже) и значения этого же показателя из "
+    "прошлых разборов клиента, если они есть в данных. Ничего не выдумывай: если показателя нет в "
+    "текущих файлах или значение не читается, не добавляй для него график. Если прошлых данных "
+    "нет, делай график из одной точки.\n"
+    "ЧАСТЬ 5. Если в данных есть прошлые разборы, сравни текущие результаты с ними: назови даты, "
+    "укажи по каждому важному показателю, растёт он, снижается или стабилен, что улучшилось, что "
+    "ухудшилось, что остаётся без изменений, и что стоит обсудить с врачом. Если прошлых разборов "
+    "нет, напиши, что это первый анализ в личном кабинете, а следующие будут сравниваться с ним. "
+    "Без диагнозов и жёстких интерпретаций."
+)
+MAX_PAST_ANALYSES = 6
+MAX_PAST_CHARS = 4000
+CHART_RE = re.compile(r"```chart.*?```", re.S)
+
+
+def _is_subscriber(dsn: str, login: str) -> bool:
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT current_tariff_id, tariff_status, tariff_expires_at FROM users WHERE login = %s",
+                (login,),
+            )
+            row = cur.fetchone()
+    finally:
+        conn.close()
+    if not row:
+        return False
+    tariff_id, status, expires_at = row
+    return (
+        tariff_id == "sub_12m"
+        and status == "active"
+        and (expires_at is None or expires_at > datetime.utcnow())
+    )
+
+
+def _past_analyses_text(dsn: str, login: str) -> str:
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT created_at, ai_result FROM analyses WHERE login = %s "
+                "AND ai_result IS NOT NULL ORDER BY created_at DESC LIMIT %s",
+                (login, MAX_PAST_ANALYSES),
+            )
+            rows = list(reversed(cur.fetchall()))
+    finally:
+        conn.close()
+    if not rows:
+        return "Прошлых разборов этого клиента нет — это первый анализ."
+    blocks = [
+        f"--- Прошлый разбор от {created_at.strftime('%d.%m.%Y')} ---\n{(result or '')[:MAX_PAST_CHARS]}"
+        for created_at, result in rows
+    ]
+    return "Прошлые разборы клиента (для графиков и сравнения):\n\n" + "\n\n".join(blocks)
+
 
 def _resp(status: int, body: Dict[str, Any]) -> Dict[str, Any]:
     return {
@@ -75,8 +146,11 @@ def _verify_token(token: str, secret: str) -> Optional[str]:
 
 
 def _call_ai(uploaded: List[Dict[str, str]], gender: str, age: str, complaints: str,
-             conditions: str, meds: str) -> str:
+             conditions: str, meds: str, login: Optional[str] = None) -> str:
     api_key = os.environ["POLZA_AI_API_KEY"]
+    dsn = os.environ["DATABASE_URL"]
+    subscriber = bool(login) and _is_subscriber(dsn, login)
+    system_prompt = SYSTEM_PROMPT
 
     profile_lines = [
         f"Пол: {'мужской' if gender == 'm' else 'женский'}",
@@ -89,8 +163,16 @@ def _call_ai(uploaded: List[Dict[str, str]], gender: str, age: str, complaints: 
     if meds:
         profile_lines.append(f"Постоянный приём лекарств: {meds}")
 
+    patient_text = "Данные пациента:\n" + "\n".join(profile_lines)
+    if subscriber:
+        system_prompt = SYSTEM_PROMPT + SUBSCRIBER_PROMPT
+        patient_text += (
+            f"\n\nСегодняшняя дата: {datetime.utcnow().strftime('%d.%m.%Y')}\n\n"
+            + _past_analyses_text(dsn, login)
+        )
+
     content: List[Dict[str, Any]] = [
-        {"type": "text", "text": "Данные пациента:\n" + "\n".join(profile_lines)},
+        {"type": "text", "text": patient_text},
     ]
     for f in uploaded:
         content.append({"type": "image_url", "image_url": {"url": f["url"]}})
@@ -98,10 +180,10 @@ def _call_ai(uploaded: List[Dict[str, str]], gender: str, age: str, complaints: 
     payload = {
         "model": POLZA_MODEL,
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": content},
         ],
-        "max_tokens": 4096,
+        "max_tokens": 7000 if subscriber else 4096,
     }
 
     req = urllib.request.Request(
@@ -150,7 +232,7 @@ def _send_result_email(email: str, ai_result: str) -> None:
     html = (
         "<h2>Ваша расшифровка анализа готова</h2>"
         "<p>Результат также доступен в личном кабинете ЛабГид.</p>"
-        f"<div style='white-space:pre-wrap'>{ai_result[:5000]}</div>"
+        f"<div style='white-space:pre-wrap'>{CHART_RE.sub('', ai_result)[:5000]}</div>"
     )
     msg = MIMEText(html, "html", "utf-8")
     msg["Subject"] = Header("ЛабГид — расшифровка анализа готова", "utf-8")
@@ -389,7 +471,7 @@ def _handle_check_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
     if yk_status == "succeeded":
         uploaded = files_json if isinstance(files_json, list) else json.loads(files_json)
         try:
-            ai_result = _call_ai(uploaded, gender, str(age or ""), complaints, conditions, meds)
+            ai_result = _call_ai(uploaded, gender, str(age or ""), complaints, conditions, meds, login)
         except Exception:
             return _resp(502, {"error": "Не удалось получить расшифровку, попробуйте ещё раз"})
 
@@ -436,7 +518,7 @@ def _handle_free_analysis(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
     uploaded = uploads.session_files_for_ai(session)
 
     try:
-        ai_result = _call_ai(uploaded, gender, age_raw, complaints, conditions, meds)
+        ai_result = _call_ai(uploaded, gender, age_raw, complaints, conditions, meds, login)
     except urllib.error.HTTPError as e:
         return _resp(502, {"error": f"Ошибка нейросети: {e.code}"})
     except Exception:

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Icon from '@/components/ui/icon';
-import ReactMarkdown from 'react-markdown';
+import AnalysisMarkdown from '@/components/site/AnalysisMarkdown';
 import { downloadAnalysisPdf } from '@/lib/pdf';
 import IncompleteOrders, { IncompleteOrder } from '@/components/site/start-flow/IncompleteOrders';
 import {
@@ -154,32 +154,7 @@ const HistoryDialog = ({
                       Ответ нейросети
                     </p>
                     {item.result ? (
-                      <ReactMarkdown
-                        components={{
-                          h2: ({ children }) => (
-                            <h2 className="mb-3 mt-6 text-xl font-bold text-foreground first:mt-0">
-                              {children}
-                            </h2>
-                          ),
-                          h3: ({ children }) => (
-                            <h3 className="mb-2 mt-5 text-lg font-bold text-foreground">
-                              {children}
-                            </h3>
-                          ),
-                          strong: ({ children }) => (
-                            <strong className="font-bold text-foreground">{children}</strong>
-                          ),
-                          p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
-                          ul: ({ children }) => (
-                            <ul className="mb-3 list-disc space-y-1 pl-5">{children}</ul>
-                          ),
-                          ol: ({ children }) => (
-                            <ol className="mb-3 list-decimal space-y-1 pl-5">{children}</ol>
-                          ),
-                        }}
-                      >
-                        {item.result}
-                      </ReactMarkdown>
+                      <AnalysisMarkdown text={item.result} />
                     ) : (
                       <p>Результат обрабатывается</p>
                     )}

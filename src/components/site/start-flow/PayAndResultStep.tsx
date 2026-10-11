@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Icon from '@/components/ui/icon';
-import ReactMarkdown from 'react-markdown';
+import AnalysisMarkdown from '@/components/site/AnalysisMarkdown';
 import { downloadAnalysisPdf } from '@/lib/pdf';
 
 interface PayStepProps {
@@ -90,28 +90,7 @@ export const DoneStep = ({ aiResult, reset, openHistory, openChat }: DoneStepPro
         <h3 className="font-head text-xl font-bold">Расшифровка готова</h3>
         {aiResult ? (
           <div className="rounded-2xl border border-border bg-background p-6 text-left text-lg leading-relaxed text-ink-soft">
-            <ReactMarkdown
-              components={{
-                h2: ({ children }) => (
-                  <h2 className="mb-3 mt-6 text-xl font-bold text-foreground first:mt-0">
-                    {children}
-                  </h2>
-                ),
-                h3: ({ children }) => (
-                  <h3 className="mb-2 mt-5 text-lg font-bold text-foreground">{children}</h3>
-                ),
-                strong: ({ children }) => (
-                  <strong className="font-bold text-foreground">{children}</strong>
-                ),
-                p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
-                ul: ({ children }) => <ul className="mb-3 list-disc space-y-1 pl-5">{children}</ul>,
-                ol: ({ children }) => (
-                  <ol className="mb-3 list-decimal space-y-1 pl-5">{children}</ol>
-                ),
-              }}
-            >
-              {aiResult}
-            </ReactMarkdown>
+            <AnalysisMarkdown text={aiResult} />
           </div>
         ) : (
           <p className="text-ink-soft">

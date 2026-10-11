@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import ReactMarkdown from 'react-markdown';
+import AnalysisMarkdown from '@/components/site/AnalysisMarkdown';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -12,29 +12,7 @@ interface AnalysisMeta {
   meds?: string | null;
 }
 
-const renderMarkdown = (text: string) => (
-  <ReactMarkdown
-    components={{
-      h2: ({ children }) => (
-        <h2 style={{ fontSize: 20, fontWeight: 700, margin: '18px 0 10px' }}>{children}</h2>
-      ),
-      h3: ({ children }) => (
-        <h3 style={{ fontSize: 17, fontWeight: 700, margin: '14px 0 8px' }}>{children}</h3>
-      ),
-      strong: ({ children }) => <strong style={{ fontWeight: 700 }}>{children}</strong>,
-      p: ({ children }) => <p style={{ margin: '0 0 10px', lineHeight: 1.55 }}>{children}</p>,
-      ul: ({ children }) => (
-        <ul style={{ margin: '0 0 10px', paddingLeft: 20 }}>{children}</ul>
-      ),
-      ol: ({ children }) => (
-        <ol style={{ margin: '0 0 10px', paddingLeft: 20 }}>{children}</ol>
-      ),
-      li: ({ children }) => <li style={{ marginBottom: 4, lineHeight: 1.5 }}>{children}</li>,
-    }}
-  >
-    {text}
-  </ReactMarkdown>
-);
+const renderMarkdown = (text: string) => <AnalysisMarkdown text={text} fixedChartWidth={690} />;
 
 export const downloadAnalysisPdf = async (result: string, meta: AnalysisMeta = {}) => {
   const container = document.createElement('div');
@@ -88,7 +66,7 @@ export const downloadAnalysisPdf = async (result: string, meta: AnalysisMeta = {
         </p>
       </div>,
     );
-    setTimeout(resolve, 120);
+    setTimeout(resolve, 400);
   });
 
   const canvas = await html2canvas(container, { scale: 2, backgroundColor: '#ffffff' });
