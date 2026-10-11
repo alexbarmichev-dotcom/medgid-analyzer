@@ -3,6 +3,7 @@ import Icon from '@/components/ui/icon';
 import { toast } from '@/hooks/use-toast';
 import { getStoredToken } from '@/lib/authStorage';
 import { emitStartIntent } from '@/lib/startFlowBus';
+import IndicatorsDialog from '@/components/site/start-flow/IndicatorsDialog';
 import ChatDialog from '@/components/site/start-flow/ChatDialog';
 
 const TARIFFS_URL = 'https://functions.poehali.dev/d75f0411-629b-4a8f-9a09-f4ffbcdcec4f';
@@ -52,6 +53,7 @@ const Pricing = () => {
   const [myTariff, setMyTariff] = useState<MyTariff | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [indicatorsOpen, setIndicatorsOpen] = useState(false);
 
   const loadTariffs = async () => {
     try {
@@ -312,13 +314,22 @@ const Pricing = () => {
                     </div>
                   )}
                   {current && tariff.id === 'sub_12m' ? (
-                    <button
-                      onClick={() => setChatOpen(true)}
-                      className="mt-8 inline-flex items-center justify-center gap-2.5 rounded-[var(--radius)] bg-primary px-7 py-4 text-base font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
-                    >
-                      <Icon name="MessageCircle" size={18} />
-                      Задать вопрос
-                    </button>
+                    <div className="mt-8 flex flex-col gap-3">
+                      <button
+                        onClick={() => setChatOpen(true)}
+                        className="inline-flex items-center justify-center gap-2.5 rounded-[var(--radius)] bg-primary px-7 py-4 text-base font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
+                      >
+                        <Icon name="MessageCircle" size={18} />
+                        Задать вопрос
+                      </button>
+                      <button
+                        onClick={() => setIndicatorsOpen(true)}
+                        className="inline-flex items-center justify-center gap-2.5 rounded-[var(--radius)] border border-border bg-background px-7 py-4 text-base font-semibold text-foreground transition-transform hover:-translate-y-0.5"
+                      >
+                        <Icon name="LineChart" size={18} />
+                        Мои показатели
+                      </button>
+                    </div>
                   ) : (
                     <button
                       onClick={() => handleSelect(tariff)}
@@ -347,6 +358,7 @@ const Pricing = () => {
       </div>
 
       <ChatDialog open={chatOpen} onOpenChange={setChatOpen} />
+      <IndicatorsDialog open={indicatorsOpen} onOpenChange={setIndicatorsOpen} />
     </section>
   );
 };

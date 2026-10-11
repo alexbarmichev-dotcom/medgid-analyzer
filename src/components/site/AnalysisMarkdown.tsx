@@ -10,12 +10,12 @@ import {
   YAxis,
 } from 'recharts';
 
-interface ChartPoint {
+export interface ChartPoint {
   date: string;
   value: number;
 }
 
-interface ChartData {
+export interface ChartData {
   title: string;
   unit?: string;
   min?: number | null;
@@ -23,7 +23,7 @@ interface ChartData {
   points: ChartPoint[];
 }
 
-const parseChart = (raw: string): ChartData | null => {
+export const parseChart = (raw: string): ChartData | null => {
   try {
     const data = JSON.parse(raw);
     if (!data || !Array.isArray(data.points)) return null;
@@ -43,7 +43,7 @@ const parseChart = (raw: string): ChartData | null => {
   }
 };
 
-const ChartBlock = ({ data, fixedWidth }: { data: ChartData; fixedWidth?: number }) => {
+export const ChartBlock = ({ data, fixedWidth }: { data: ChartData; fixedWidth?: number }) => {
   const values = data.points.map((p) => p.value);
   const lows = [...values, ...(data.min !== null && data.min !== undefined ? [data.min] : [])];
   const highs = [...values, ...(data.max !== null && data.max !== undefined ? [data.max] : [])];
