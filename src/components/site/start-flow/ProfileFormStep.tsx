@@ -264,6 +264,18 @@ const ProfileFormStep = ({
         )}
       </div>
 
+      {analyzing && !uploading && (
+        <div className="flex items-start gap-3 rounded-2xl border border-hand/30 bg-hand/10 p-4">
+          <Icon name="Loader2" size={22} className="mt-0.5 shrink-0 animate-spin text-hand" />
+          <div>
+            <p className="font-semibold text-hand">Разбираем анализы</p>
+            <p className="mt-1 text-sm text-ink-soft">
+              Это занимает до двух минут. Страницу можно не закрывать — результат появится сам.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-3">
         <button
           onClick={onBack}
@@ -278,7 +290,7 @@ const ProfileFormStep = ({
           disabled={busy}
           className="inline-flex flex-1 items-center justify-center gap-2 rounded-[var(--radius)] bg-accent px-6 py-4 text-base font-semibold text-accent-foreground transition-transform hover:-translate-y-0.5 disabled:opacity-60"
         >
-          {uploading ? 'Загружаем файлы…' : analyzing ? 'Разбираем анализ…' : 'Отправить'}
+          {uploading ? 'Загружаем файлы…' : analyzing ? 'Разбираем анализы…' : 'Отправить'}
           {!busy && <Icon name="ArrowRight" size={18} />}
         </button>
       </div>

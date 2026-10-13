@@ -30,6 +30,8 @@ const AUTH_URL = 'https://functions.poehali.dev/8c1cf8ce-6c17-461b-aec5-95a01638
 const TARIFFS_URL = 'https://functions.poehali.dev/d75f0411-629b-4a8f-9a09-f4ffbcdcec4f';
 const HISTORY_URL = 'https://functions.poehali.dev/c6e19e20-72b0-4a41-b317-8eb65ffd4dce';
 
+const JOB_POLL_MS = 3000;
+const JOB_MAX_ATTEMPTS = 100;
 const POLL_INTERVAL_MS = 3000;
 const POLL_MAX_ATTEMPTS = 40; // ~2 минуты
 
@@ -285,6 +287,12 @@ export const useStartFlow = () => {
         return;
       }
 
+      if (data.status === 'error') {
+        setCheckingPayment(false);
+        toast({ title: data.error || 'Не удалось получить расшифровку, попробуйте ещё раз' });
+        return;
+      }
+
       if (data.status === 'canceled') {
         setCheckingPayment(false);
         requireReupload(
@@ -294,7 +302,8 @@ export const useStartFlow = () => {
       }
 
       // pending — продолжаем опрос
-      if (attempt + 1 >= POLL_MAX_ATTEMPTS) {
+      const maxAttempts = data.status === 'processing' ? JOB_MAX_ATTEMPTS : POLL_MAX_ATTEMPTS;
+      if (attempt + 1 >= maxAttempts) {
         setCheckingPayment(false);
         toast({
           title: 'Оплата ещё не подтверждена',
@@ -525,34 +534,82 @@ export const useStartFlow = () => {
     setStep('pay');
   };
 
-  const onFreeAnalyze = async (id: string) => {
+  const finishAnalysis = (result: string) => {
+    setAiResult(result);
+    setSessionId(null);
+    setAnalyzing(false);
+    toast({ title: 'Расшифровка готова' });
+    setStep('done');
+    loadHistory();
+  };
+
+  const onFreeAnalyze = (id: string) => {
     setAnalyzing(true);
-    try {
-      const token = getStoredToken() || '';
-      const res = await fetch(`${ANALYZE_URL}?action=free`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Authorization': token },
-        body: JSON.stringify({ sessionId: id }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        if (data.code === 'reupload_required') {
+    const token = getStoredToken() || '';
+    const headers = { 'Content-Type': 'application/json', 'X-Authorization': token };
+    let settled = false;
+    const stop = () => {
+      settled = true;
+      if (pollRef.current) clearTimeout(pollRef.current);
+    };
+
+    fetch(`${ANALYZE_URL}?action=free`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ sessionId: id }),
+      keepalive: true,
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (settled) return;
+        if (res.ok && data.status === 'done') {
+          stop();
+          finishAnalysis(data.result || '');
+        } else if (!res.ok && data.code === 'reupload_required') {
+          stop();
+          setAnalyzing(false);
           requireReupload(data.error);
-        } else {
-          toast({ title: data.error || 'Не удалось получить расшифровку' });
         }
+      })
+      .catch(() => undefined);
+
+    const poll = async (attempt: number) => {
+      if (settled) return;
+      if (attempt >= JOB_MAX_ATTEMPTS) {
+        stop();
+        setAnalyzing(false);
+        toast({
+          title: 'Разбор занимает дольше обычного',
+          description: 'Откройте «Историю» через пару минут — результат появится там',
+        });
+        loadHistory();
         return;
       }
-      setAiResult(data.result || '');
-      setSessionId(null);
-      toast({ title: 'Расшифровка готова' });
-      setStep('done');
-      loadHistory();
-    } catch {
-      toast({ title: 'Ошибка сети, попробуйте ещё раз' });
-    } finally {
-      setAnalyzing(false);
-    }
+      try {
+        const res = await fetch(`${ANALYZE_URL}?action=job_status`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ sessionId: id }),
+        });
+        const data = await res.json();
+        if (settled) return;
+        if (res.ok && data.status === 'done') {
+          stop();
+          finishAnalysis(data.result || '');
+          return;
+        }
+        if (res.ok && data.status === 'error') {
+          stop();
+          setAnalyzing(false);
+          toast({ title: data.error || 'Не удалось получить расшифровку' });
+          return;
+        }
+      } catch {
+        /* связь могла моргнуть — просто спросим ещё раз */
+      }
+      if (!settled) pollRef.current = setTimeout(() => poll(attempt + 1), JOB_POLL_MS);
+    };
+    pollRef.current = setTimeout(() => poll(0), JOB_POLL_MS);
   };
 
   const onPay = async () => {

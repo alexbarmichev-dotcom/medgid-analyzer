@@ -19,9 +19,9 @@ export const PayStep = ({ analyzing, checkingPayment, onPay, onBack }: PayStepPr
           <Icon name="Loader2" size={26} className="animate-spin" />
         </span>
         <div>
-          <h3 className="font-head text-xl font-bold">Проверяем оплату…</h3>
+          <h3 className="font-head text-xl font-bold">Проверяем оплату и разбираем анализы…</h3>
           <p className="mt-2 text-ink-soft">
-            Если вы уже оплатили в ЮKassa — подождите, обычно это занимает несколько секунд.
+            Если вы уже оплатили в ЮKassa — подождите. Разбор может занять до двух минут, результат появится сам.
           </p>
         </div>
       </div>

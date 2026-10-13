@@ -17,6 +17,7 @@ from typing import Dict, Any, List, Optional
 import psycopg2
 
 import uploads
+import jobs
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -469,16 +470,28 @@ def _handle_check_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
     yk_status = payment.get("status")
 
     if yk_status == "succeeded":
+        job_key = f"pay:{payment_id}"
+        existing, claimed = jobs.claim(job_key, login)
+        if not claimed:
+            view = jobs.view(existing)
+            if view["status"] == "running":
+                return _resp(200, {"ok": True, "status": "processing"})
+            if view["status"] == "done":
+                return _resp(200, view)
+            return _resp(200, {"ok": True, "status": "error", "error": view.get("error")})
         uploaded = files_json if isinstance(files_json, list) else json.loads(files_json)
         try:
             ai_result = _call_ai(uploaded, gender, str(age or ""), complaints, conditions, meds, login)
         except Exception:
-            return _resp(502, {"error": "Не удалось получить расшифровку, попробуйте ещё раз"})
+            jobs.finish(job_key, "error", error="Не удалось получить расшифровку, попробуйте ещё раз")
+            return _resp(200, {"ok": True, "status": "error",
+                               "error": "Не удалось получить расшифровку, попробуйте ещё раз"})
 
         analysis_id = _save_analysis(
             dsn, login, gender, age, complaints, conditions, meds,
             [f["url"] for f in uploaded], ai_result, payment_id, "paid", PRICE_RUB, email,
         )
+        jobs.finish(job_key, "done", analysis_id=analysis_id, result=ai_result)
         _mark_pending(dsn, payment_id, "done")
         if session_id:
             uploads.set_status(session_id, "done")
@@ -500,13 +513,26 @@ def _handle_check_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
     return _resp(200, {"ok": True, "status": "pending"})
 
 
+def _handle_job_status(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
+    session_id = str(body.get("sessionId") or "")
+    payment_id = str(body.get("paymentId") or "")
+    key = f"free:{session_id}" if session_id else f"pay:{payment_id}"
+    return _resp(200, jobs.view(jobs.get(key, login)))
+
+
 def _handle_free_analysis(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
     dsn = os.environ["DATABASE_URL"]
     if not _is_user_free(dsn, login):
         return _resp(403, {"error": "Бесплатный доступ недоступен для этого аккаунта"})
 
+    job_key = f"free:{str(body.get('sessionId') or '')}"
+    existing, claimed = jobs.claim(job_key, login)
+    if not claimed:
+        return _resp(200, jobs.view(existing))
+
     session, err = _load_ready_session(login, body)
     if err:
+        jobs.finish(job_key, "error", error="Файлы недоступны, загрузите анализ заново")
         return err
     gender = session["gender"] or ""
     age = session["age"]
@@ -520,8 +546,10 @@ def _handle_free_analysis(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
     try:
         ai_result = _call_ai(uploaded, gender, age_raw, complaints, conditions, meds, login)
     except urllib.error.HTTPError as e:
+        jobs.finish(job_key, "error", error=f"Ошибка нейросети: {e.code}")
         return _resp(502, {"error": f"Ошибка нейросети: {e.code}"})
     except Exception:
+        jobs.finish(job_key, "error", error="Не удалось получить расшифровку, попробуйте ещё раз")
         return _resp(502, {"error": "Не удалось получить расшифровку, попробуйте ещё раз"})
 
     try:
@@ -532,6 +560,7 @@ def _handle_free_analysis(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
     except Exception:
         analysis_id = None
 
+    jobs.finish(job_key, "done", analysis_id=analysis_id, result=ai_result)
     uploads.set_status(session["id"], "done")
 
     if email:
@@ -741,6 +770,11 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         if not login:
             return _resp(401, {"error": "Требуется вход в личный кабинет"})
         return _handle_check_payment(login, body)
+
+    if action == "job_status":
+        if not login:
+            return _resp(401, {"error": "Требуется вход в личный кабинет"})
+        return _handle_job_status(login, body)
 
     if action == "free":
         if not login:
