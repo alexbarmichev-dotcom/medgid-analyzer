@@ -50,6 +50,8 @@ const StartFlow = () => {
     historyOpen,
     setHistoryOpen,
     isFree,
+    recheckingSub,
+    recheckSubscription,
     uploadProgress,
     uploadFileIndex,
     incomplete,
@@ -118,6 +120,8 @@ const StartFlow = () => {
           verifyCode={verifyCode}
           resendCode={resendCode}
           isFree={isFree}
+          recheckingSub={recheckingSub}
+          recheckSubscription={recheckSubscription}
           gender={gender}
           setGender={setGender}
           age={age}

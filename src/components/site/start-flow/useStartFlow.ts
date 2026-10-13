@@ -58,6 +58,7 @@ export const useStartFlow = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [isFree, setIsFree] = useState(false);
+  const [recheckingSub, setRecheckingSub] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [uploadFileIndex, setUploadFileIndex] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -344,6 +345,26 @@ export const useStartFlow = () => {
       toast({ title: 'Код отправлен повторно' });
     } catch {
       toast({ title: 'Ошибка сети, попробуйте ещё раз' });
+    }
+  };
+
+  const recheckSubscription = async () => {
+    setRecheckingSub(true);
+    try {
+      const active = await checkSubscriber();
+      if (active) {
+        toast({ title: 'Подписка активна', description: 'Добро пожаловать в личный кабинет' });
+        loadHistory();
+        loadIncomplete();
+        setStep('form');
+      } else {
+        toast({
+          title: 'Оплата пока не найдена',
+          description: 'Если вы только что оплатили, подождите минуту и нажмите ещё раз',
+        });
+      }
+    } finally {
+      setRecheckingSub(false);
     }
   };
 
@@ -721,6 +742,8 @@ export const useStartFlow = () => {
     historyOpen,
     setHistoryOpen,
     isFree,
+    recheckingSub,
+    recheckSubscription,
     uploadProgress,
     uploadFileIndex,
     incomplete,

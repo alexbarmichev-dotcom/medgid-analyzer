@@ -33,6 +33,8 @@ interface StartFlowPanelProps {
   verifyCode: () => void;
   resendCode: () => void;
   isFree: boolean;
+  recheckingSub: boolean;
+  recheckSubscription: () => void;
   gender: 'm' | 'f' | '';
   setGender: (gender: 'm' | 'f' | '') => void;
   age: string;
@@ -89,6 +91,8 @@ const StartFlowPanel = ({
   verifyCode,
   resendCode,
   isFree,
+  recheckingSub,
+  recheckSubscription,
   gender,
   setGender,
   age,
@@ -226,6 +230,18 @@ const StartFlowPanel = ({
                 Разовый разбор за 150 ₽
               </button>
             </div>
+            <button
+              onClick={recheckSubscription}
+              disabled={recheckingSub}
+              className="inline-flex items-center justify-center gap-2 text-sm font-semibold text-hand hover:underline disabled:opacity-60"
+            >
+              <Icon
+                name={recheckingSub ? 'Loader2' : 'RefreshCw'}
+                size={16}
+                className={recheckingSub ? 'animate-spin' : ''}
+              />
+              {recheckingSub ? 'Проверяем оплату…' : 'Проверить оплату'}
+            </button>
           </div>
         )}
 

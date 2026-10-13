@@ -52,6 +52,7 @@ const Pricing = () => {
   const [loading, setLoading] = useState(true);
   const [myTariff, setMyTariff] = useState<MyTariff | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [rechecking, setRechecking] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [indicatorsOpen, setIndicatorsOpen] = useState(false);
 
@@ -85,6 +86,33 @@ const Pricing = () => {
       }
     } catch {
       /* тихо игнорируем */
+    }
+  };
+
+  const recheckPayment = async () => {
+    const token = getStoredToken();
+    if (!token || isGuestLogin(getStoredLogin())) {
+      toast({ title: 'Сначала войдите в личный кабинет' });
+      scrollTo('#start');
+      return;
+    }
+    setRechecking(true);
+    try {
+      const res = await fetch(`${TARIFFS_URL}?resource=me`, { headers: { 'X-Authorization': token } });
+      const data = await res.json();
+      if (res.ok && data.tariffId === 'sub_12m' && data.tariffStatus === 'active') {
+        toast({ title: 'Подписка активна', description: 'Спасибо за оплату!' });
+        await loadMyTariff();
+      } else {
+        toast({
+          title: 'Оплата пока не найдена',
+          description: 'Если вы только что оплатили, подождите минуту и нажмите ещё раз',
+        });
+      }
+    } catch {
+      toast({ title: 'Ошибка сети, попробуйте ещё раз' });
+    } finally {
+      setRechecking(false);
     }
   };
 
@@ -348,6 +376,20 @@ const Pricing = () => {
                             ? 'Начать разбор'
                             : 'Оформить подписку'}
                       {!current && payingId !== tariff.id && <Icon name="ArrowRight" size={18} />}
+                    </button>
+                  )}
+                  {!current && tariff.id === 'sub_12m' && (
+                    <button
+                      onClick={recheckPayment}
+                      disabled={rechecking}
+                      className="mt-3 inline-flex items-center justify-center gap-2 text-sm font-semibold text-accent-foreground/80 hover:underline disabled:opacity-60"
+                    >
+                      <Icon
+                        name={rechecking ? 'Loader2' : 'RefreshCw'}
+                        size={15}
+                        className={rechecking ? 'animate-spin' : ''}
+                      />
+                      {rechecking ? 'Проверяем оплату…' : 'Уже оплатили? Проверить оплату'}
                     </button>
                   )}
                 </div>
