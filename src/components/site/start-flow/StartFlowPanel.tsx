@@ -33,6 +33,8 @@ interface StartFlowPanelProps {
   verifyCode: () => void;
   resendCode: () => void;
   isFree: boolean;
+  fullName: string;
+  setFullName: (v: string) => void;
   recheckingSub: boolean;
   recheckSubscription: () => void;
   isSubscriber: boolean;
@@ -93,6 +95,8 @@ const StartFlowPanel = ({
   verifyCode,
   resendCode,
   isFree,
+  fullName,
+  setFullName,
   recheckingSub,
   recheckSubscription,
   isSubscriber,
@@ -270,6 +274,9 @@ const StartFlowPanel = ({
         {step === 'form' && (
           <ProfileFormStep
             isFree={isFree}
+            showName={isSubscriber}
+            fullName={fullName}
+            setFullName={setFullName}
             gender={gender}
             setGender={setGender}
             age={age}

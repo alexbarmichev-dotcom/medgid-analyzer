@@ -11,6 +11,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 
+const TARIFFS_URL = 'https://functions.poehali.dev/d75f0411-629b-4a8f-9a09-f4ffbcdcec4f';
 const HISTORY_URL = 'https://functions.poehali.dev/c6e19e20-72b0-4a41-b317-8eb65ffd4dce';
 const CHART_BLOCK_RE = /```chart\s*([\s\S]*?)```/g;
 
@@ -74,11 +75,16 @@ const IndicatorsDialog = ({ open, onOpenChange }: IndicatorsDialogProps) => {
   const [error, setError] = useState<string | null>(null);
   const [onlyAbnormal, setOnlyAbnormal] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [fullName, setFullName] = useState('');
 
   useEffect(() => {
     if (!open) return;
     setLoading(true);
     setError(null);
+    fetch(`${TARIFFS_URL}?resource=me`, { headers: { 'X-Authorization': getStoredToken() || '' } })
+      .then((r) => r.json())
+      .then((d) => setFullName(d.fullName || ''))
+      .catch(() => undefined);
     fetch(HISTORY_URL, { headers: { 'X-Authorization': getStoredToken() || '' } })
       .then(async (res) => {
         const data = await res.json();
@@ -108,7 +114,7 @@ const IndicatorsDialog = ({ open, onOpenChange }: IndicatorsDialogProps) => {
         .find((i) => i.gender || i.age);
       const rawLogin = getStoredLogin() || '';
       await downloadIndicatorsPdf(visible, {
-        login: rawLogin.startsWith('acct:') ? rawLogin.slice(5) : rawLogin,
+        login: fullName || (rawLogin.startsWith('acct:') ? rawLogin.slice(5) : rawLogin),
         gender: latest?.gender,
         age: latest?.age,
       });

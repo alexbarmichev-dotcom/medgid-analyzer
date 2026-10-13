@@ -12,6 +12,9 @@ import {
 
 interface ProfileFormStepProps {
   isFree: boolean;
+  showName: boolean;
+  fullName: string;
+  setFullName: (v: string) => void;
   gender: 'm' | 'f' | '';
   setGender: (gender: 'm' | 'f' | '') => void;
   age: string;
@@ -36,6 +39,9 @@ interface ProfileFormStepProps {
 
 const ProfileFormStep = ({
   isFree,
+  showName,
+  fullName,
+  setFullName,
   gender,
   setGender,
   age,
@@ -106,6 +112,19 @@ const ProfileFormStep = ({
           />
         </div>
       </div>
+
+      {showName && (
+      <div className="space-y-2">
+        <Label htmlFor="fullName">Ваше имя (необязательно)</Label>
+        <Input
+          id="fullName"
+          placeholder="Например, Иван Петров — будет в PDF с показателями"
+          value={fullName}
+          maxLength={100}
+          onChange={(e) => setFullName(e.target.value)}
+        />
+      </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="complaints">Недомогания в данный момент</Label>

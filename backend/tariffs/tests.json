@@ -1,5 +1,6 @@
 {
   "tests": [
+    {"name": "set_name without auth", "method": "POST", "path": "/?action=set_name", "body": {"fullName": "x"}, "expectedStatus": 401},
     {
       "name": "options preflight",
       "method": "OPTIONS",

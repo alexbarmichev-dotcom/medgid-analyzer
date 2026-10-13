@@ -66,6 +66,7 @@ export const useStartFlow = () => {
   const [isFree, setIsFree] = useState(false);
   const [recheckingSub, setRecheckingSub] = useState(false);
   const [isSubscriber, setIsSubscriber] = useState(false);
+  const [fullName, setFullName] = useState('');
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [uploadFileIndex, setUploadFileIndex] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -125,6 +126,7 @@ export const useStartFlow = () => {
       const data = await res.json();
       const active = res.ok && data.tariffId === 'sub_12m' && data.tariffStatus === 'active';
       setIsSubscriber(active);
+      if (res.ok && data.fullName) setFullName((prev) => prev || data.fullName);
       if (active) setIsFree(true);
       return active;
     } catch {
@@ -479,7 +481,18 @@ export const useStartFlow = () => {
     }
   };
 
+  const saveFullName = () => {
+    const token = getStoredToken();
+    if (!token || !isSubscriber) return;
+    fetch(`${TARIFFS_URL}?action=set_name`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Authorization': token },
+      body: JSON.stringify({ fullName }),
+    }).catch(() => undefined);
+  };
+
   const onSubmit = async () => {
+    saveFullName();
     if (!gender || !age) {
       toast({ title: 'Укажите пол и возраст' });
       return;
@@ -750,6 +763,8 @@ export const useStartFlow = () => {
     recheckingSub,
     recheckSubscription,
     isSubscriber,
+    fullName,
+    setFullName,
     uploadProgress,
     uploadFileIndex,
     incomplete,

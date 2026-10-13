@@ -52,6 +52,8 @@ const StartFlow = () => {
     historyOpen,
     setHistoryOpen,
     isFree,
+    fullName,
+    setFullName,
     recheckingSub,
     recheckSubscription,
     isSubscriber,
@@ -123,6 +125,8 @@ const StartFlow = () => {
           verifyCode={verifyCode}
           resendCode={resendCode}
           isFree={isFree}
+          fullName={fullName}
+          setFullName={setFullName}
           recheckingSub={recheckingSub}
           recheckSubscription={recheckSubscription}
           isSubscriber={isSubscriber}
