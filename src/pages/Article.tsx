@@ -5,6 +5,25 @@ import Header from '@/components/site/Header';
 import Footer from '@/components/site/Footer';
 import { ARTICLES } from '@/data/articles';
 
+const URL_RE = /(https?:\/\/[^\s,]+)/g;
+
+const renderWithLinks = (text: string) =>
+  text.split(URL_RE).map((part, i) =>
+    /^https?:\/\//.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-semibold text-accent underline underline-offset-2 hover:text-hand"
+      >
+        {part.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+      </a>
+    ) : (
+      part
+    ),
+  );
+
 const Article = () => {
   const { slug } = useParams();
   const article = ARTICLES.find((a) => a.slug === slug);
@@ -85,7 +104,7 @@ const Article = () => {
                   </h2>
                 );
               }
-              return <p key={i}>{p}</p>;
+              return <p key={i}>{renderWithLinks(p)}</p>;
             })}
           </div>
 
