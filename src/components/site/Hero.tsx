@@ -17,15 +17,15 @@ const Hero = () => {
         }}
       />
 
-      <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-12 px-5 py-14 md:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:py-20">
+      <div className="relative z-10 mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] items-center gap-12 px-5 py-14 md:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:py-20">
         {/* left column */}
         <div className="animate-fade-in">
-          <span className="mb-5 inline-flex items-center gap-2.5 text-sm font-semibold uppercase tracking-wide text-accent">
+          <span className="mb-5 inline-flex items-center gap-2.5 text-xs sm:text-sm font-semibold uppercase tracking-wide text-accent">
             <span className="h-[7px] w-[7px] rounded-full bg-accent" />
             Расшифровка анализов на понятном языке
           </span>
 
-          <h1 className="font-head text-[2.6rem] font-extrabold leading-[1.02] tracking-[-0.035em] sm:text-[3.4rem] lg:text-[3.2rem] xl:text-[3.7rem]">
+          <h1 className="font-head text-[2.1rem] font-extrabold leading-[1.05] tracking-[-0.035em] sm:text-[3.4rem] lg:text-[3.2rem] xl:text-[3.7rem]">
             <span className="block w-full text-center font-normal text-muted-foreground">Пришли результаты анализов из лаборатории</span>
             <br />
             <span className="block w-full text-center">
@@ -55,7 +55,7 @@ const Hero = () => {
 
         {/* right column — lab card */}
         <div className="relative">
-          <span className="absolute -top-4 left-[38%] z-20 -rotate-6 font-caveat text-4xl font-bold text-[#0FA968] [text-shadow:0_1px_4px_rgba(255,255,255,0.6)]">
+          <span className="absolute -top-4 left-[20%] z-20 -rotate-6 font-caveat text-2xl sm:left-[38%] sm:text-4xl font-bold text-[#0FA968] [text-shadow:0_1px_4px_rgba(255,255,255,0.6)]">
             вот тут и&nbsp;начинается разговор
           </span>
 

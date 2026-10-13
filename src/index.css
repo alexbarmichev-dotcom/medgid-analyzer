@@ -112,6 +112,17 @@
 
   html {
     scroll-behavior: smooth;
+    overflow-x: clip;
+  }
+
+  body {
+    overflow-x: clip;
+    max-width: 100vw;
+  }
+
+  img,
+  video {
+    max-width: 100%;
   }
 }
 
@@ -119,9 +130,19 @@
   /* Рукописная подчёркивающая каракуля (a la Загмайстер) */
   .hand-underline {
     position: relative;
-    white-space: nowrap;
+    white-space: normal;
+    text-decoration: underline wavy hsl(var(--hero-hand));
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.12em;
+  }
+  @media (min-width: 640px) {
+    .hand-underline {
+      white-space: nowrap;
+      text-decoration: none;
+    }
   }
   .hand-underline::after {
+    display: none;
     content: "";
     position: absolute;
     left: -4px;
@@ -133,6 +154,11 @@
     transform: rotate(-1.2deg) scaleX(1.01);
     opacity: 0.9;
     pointer-events: none;
+  }
+  @media (min-width: 640px) {
+    .hand-underline::after {
+      display: block;
+    }
   }
 
   /* Полоски бумажной сетки для фона секций */
