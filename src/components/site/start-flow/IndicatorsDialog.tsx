@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { ChartBlock, ChartData, ChartPoint, parseChart } from '@/components/site/AnalysisMarkdown';
-import { getStoredToken } from '@/lib/authStorage';
+import { getStoredLogin, getStoredToken } from '@/lib/authStorage';
 import { downloadIndicatorsPdf } from '@/lib/pdf';
 import {
   Dialog,
@@ -16,6 +16,8 @@ const CHART_BLOCK_RE = /```chart\s*([\s\S]*?)```/g;
 
 interface RawItem {
   date: string | null;
+  gender?: string | null;
+  age?: number | null;
   result: string | null;
 }
 
@@ -101,7 +103,15 @@ const IndicatorsDialog = ({ open, onOpenChange }: IndicatorsDialogProps) => {
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      await downloadIndicatorsPdf(visible);
+      const latest = [...items]
+        .sort((a, b) => toTime(b.date || '') - toTime(a.date || ''))
+        .find((i) => i.gender || i.age);
+      const rawLogin = getStoredLogin() || '';
+      await downloadIndicatorsPdf(visible, {
+        login: rawLogin.startsWith('acct:') ? rawLogin.slice(5) : rawLogin,
+        gender: latest?.gender,
+        age: latest?.age,
+      });
     } finally {
       setDownloading(false);
     }

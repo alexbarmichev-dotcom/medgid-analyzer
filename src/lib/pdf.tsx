@@ -103,7 +103,22 @@ export interface IndicatorForPdf extends ChartData {
   outOfRange: boolean;
 }
 
-export const downloadIndicatorsPdf = async (indicators: IndicatorForPdf[]) => {
+export interface PdfProfile {
+  login?: string | null;
+  gender?: string | null;
+  age?: number | null;
+}
+
+export const downloadIndicatorsPdf = async (
+  indicators: IndicatorForPdf[],
+  profile: PdfProfile = {},
+) => {
+  const profileLines = [
+    profile.login && `Клиент: ${profile.login}`,
+    profile.gender === 'm' ? 'Пол: мужской' : profile.gender === 'f' ? 'Пол: женский' : null,
+    profile.age ? `Возраст: ${profile.age}` : null,
+  ].filter(Boolean) as string[];
+
   const container = document.createElement('div');
   container.style.position = 'fixed';
   container.style.top = '0';
@@ -124,6 +139,22 @@ export const downloadIndicatorsPdf = async (indicators: IndicatorForPdf[]) => {
           <p style={{ fontSize: 13, color: '#6b6b63', margin: 0 }}>
             Динамика показателей на {new Date().toLocaleDateString('ru-RU')}
           </p>
+          {profileLines.length > 0 && (
+            <div
+              style={{
+                background: '#f4f2ec',
+                borderRadius: 12,
+                padding: '10px 14px',
+                marginTop: 12,
+                fontSize: 13,
+                lineHeight: 1.6,
+              }}
+            >
+              {profileLines.map((line, i) => (
+                <div key={i}>{line}</div>
+              ))}
+            </div>
+          )}
         </div>
         {indicators.map((ind, i) => {
           const diff = ind.prev !== null ? Number((ind.last - ind.prev).toFixed(2)) : null;
