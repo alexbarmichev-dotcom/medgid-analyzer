@@ -19,6 +19,7 @@ import { IncompleteOrder } from '@/components/site/start-flow/IncompleteOrders';
 import { getDeviceId } from '@/lib/deviceId';
 import {
   PAY_RETURN_PARAM,
+  getStoredLogin,
   getStoredToken,
   savePendingPayment,
   storeSession,
@@ -191,6 +192,13 @@ export const useStartFlow = () => {
     window.addEventListener(START_FLOW_EVENT, onIntent);
     return () => window.removeEventListener(START_FLOW_EVENT, onIntent);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const stored = getStoredLogin() || '';
+    if (EMAIL_RE.test(stored) && !stored.startsWith('guest:') && !stored.startsWith('acct:')) {
+      setEmail((prev) => prev || stored);
+    }
   }, []);
 
   // возврат по ссылке из письма: подставляем анкету, клиенту остаётся прикрепить файлы
