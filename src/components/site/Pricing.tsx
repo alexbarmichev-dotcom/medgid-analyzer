@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { toast } from '@/hooks/use-toast';
-import { getStoredToken } from '@/lib/authStorage';
+import { getStoredLogin, getStoredToken, isGuestLogin } from '@/lib/authStorage';
 import { emitStartIntent } from '@/lib/startFlowBus';
 import IndicatorsDialog from '@/components/site/start-flow/IndicatorsDialog';
 import ChatDialog from '@/components/site/start-flow/ChatDialog';
@@ -132,7 +132,7 @@ const Pricing = () => {
     }
 
     const token = getStoredToken();
-    if (!token) {
+    if (!token || isGuestLogin(getStoredLogin())) {
       emitStartIntent('subscribe', tariff.id);
       toast({ title: 'Сначала войдите', description: 'Это займёт меньше минуты' });
       scrollTo('#start');

@@ -1,4 +1,5 @@
 import Icon from '@/components/ui/icon';
+import { emitStartIntent } from '@/lib/startFlowBus';
 import AuthStep from '@/components/site/start-flow/AuthStep';
 import ProfileFormStep from '@/components/site/start-flow/ProfileFormStep';
 import { PayStep, DoneStep } from '@/components/site/start-flow/PayAndResultStep';
@@ -133,7 +134,7 @@ const StartFlowPanel = ({
         })}
       </div>
 
-      {step !== 'auth' && (
+      {step !== 'auth' && step !== 'locked' && (
         <div className="mb-4 flex justify-center">
           <button
             onClick={openHistory}
@@ -196,6 +197,36 @@ const StartFlowPanel = ({
             passwordSubmitting={passwordSubmitting}
             passwordLogin={passwordLogin}
           />
+        )}
+
+        {step === 'locked' && (
+          <div className="animate-fade-in space-y-5 py-4 text-center">
+            <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-hand/12 text-hand">
+              <Icon name="Lock" size={26} />
+            </span>
+            <div>
+              <h3 className="font-head text-xl font-bold">Кабинет для подписчиков</h3>
+              <p className="mt-2 text-ink-soft">
+                Личный кабинет с историей, графиками и AI-чатом доступен по подписке «12 месяцев».
+                Если вы только что оплатили, подождите минуту и войдите снова.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+              <button
+                onClick={() => document.querySelector('#pricing')?.scrollIntoView({ behavior: 'smooth' })}
+                className="inline-flex items-center justify-center gap-2 rounded-[var(--radius)] bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground"
+              >
+                Оформить подписку
+                <Icon name="ArrowRight" size={16} />
+              </button>
+              <button
+                onClick={() => emitStartIntent('anonymous')}
+                className="inline-flex items-center justify-center gap-2 rounded-[var(--radius)] border border-border bg-background px-6 py-3.5 text-sm font-semibold text-ink-soft"
+              >
+                Разовый разбор за 150 ₽
+              </button>
+            </div>
+          </div>
         )}
 
         {step === 'form' && (

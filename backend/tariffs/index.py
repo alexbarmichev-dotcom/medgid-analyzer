@@ -121,7 +121,93 @@ def _ensure_chat_period(cur, login: str, questions_limit: int) -> Dict[str, Any]
     }
 
 
+def _activate_subscription(cur, login: str, tariff_id: str, payment_id: str) -> None:
+    """Включает подписку; повторная оплата продлевает действующую."""
+    cur.execute(
+        "SELECT duration_days, chat_question_limit FROM tariffs WHERE id = %s",
+        (tariff_id,),
+    )
+    duration_days, chat_limit = cur.fetchone()
+    now = datetime.utcnow()
+
+    cur.execute(
+        "SELECT current_tariff_id, tariff_status, tariff_expires_at FROM users WHERE login = %s",
+        (login,),
+    )
+    cur_tariff, cur_status, cur_expires = cur.fetchone()
+    start = now
+    extending = (
+        cur_tariff == tariff_id and cur_status == "active"
+        and cur_expires is not None and cur_expires > now
+    )
+    if extending:
+        start = cur_expires
+    expires_at = start + timedelta(days=duration_days) if duration_days else None
+
+    if extending:
+        cur.execute(
+            "UPDATE users SET tariff_expires_at = %s WHERE login = %s",
+            (expires_at, login),
+        )
+    else:
+        cur.execute(
+            "UPDATE users SET current_tariff_id = %s, tariff_started_at = %s, "
+            "tariff_expires_at = %s, tariff_status = 'active' WHERE login = %s",
+            (tariff_id, now, expires_at, login),
+        )
+        if tariff_id == "sub_12m" and chat_limit:
+            cur.execute(
+                "INSERT INTO chat_usage (user_login, period_start, period_end, "
+                "questions_used, questions_limit) VALUES (%s, %s, %s, 0, %s)",
+                (login, now, now + timedelta(days=CHAT_PERIOD_DAYS), chat_limit),
+            )
+
+    cur.execute(
+        "UPDATE pending_subscriptions SET status = 'done' WHERE payment_id = %s",
+        (payment_id,),
+    )
+
+
+def _sync_pending_subscriptions(dsn: str, login: str) -> None:
+    """Проверяет в ЮKassa неподтверждённые платежи пользователя и включает оплаченные подписки."""
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT payment_id, tariff_id FROM pending_subscriptions "
+                "WHERE login = %s AND status = 'pending' AND created_at > now() - interval '30 days' "
+                "ORDER BY created_at ASC LIMIT 5",
+                (login,),
+            )
+            pending = cur.fetchall()
+    finally:
+        conn.close()
+
+    for payment_id, tariff_id in pending:
+        try:
+            payment = _yookassa_request("GET", f"/payments/{payment_id}")
+        except Exception:
+            continue
+        yk_status = payment.get("status")
+        if yk_status not in ("succeeded", "canceled"):
+            continue
+        conn = psycopg2.connect(dsn)
+        try:
+            with conn.cursor() as cur:
+                if yk_status == "succeeded":
+                    _activate_subscription(cur, login, tariff_id, payment_id)
+                else:
+                    cur.execute(
+                        "UPDATE pending_subscriptions SET status = 'canceled' WHERE payment_id = %s",
+                        (payment_id,),
+                    )
+            conn.commit()
+        finally:
+            conn.close()
+
+
 def _handle_me(dsn: str, login: str) -> Dict[str, Any]:
+    _sync_pending_subscriptions(dsn, login)
     conn = psycopg2.connect(dsn)
     try:
         with conn.cursor() as cur:
@@ -283,31 +369,7 @@ def _handle_check_payment(dsn: str, login: str, body: Dict[str, Any]) -> Dict[st
         conn = psycopg2.connect(dsn)
         try:
             with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT duration_days, chat_question_limit FROM tariffs WHERE id = %s",
-                    (tariff_id,),
-                )
-                duration_days, chat_limit = cur.fetchone()
-                now = datetime.utcnow()
-                expires_at = now + timedelta(days=duration_days) if duration_days else None
-
-                cur.execute(
-                    "UPDATE users SET current_tariff_id = %s, tariff_started_at = %s, "
-                    "tariff_expires_at = %s, tariff_status = 'active' WHERE login = %s",
-                    (tariff_id, now, expires_at, login),
-                )
-
-                if tariff_id == "sub_12m" and chat_limit:
-                    cur.execute(
-                        "INSERT INTO chat_usage (user_login, period_start, period_end, "
-                        "questions_used, questions_limit) VALUES (%s, %s, %s, 0, %s)",
-                        (login, now, now + timedelta(days=CHAT_PERIOD_DAYS), chat_limit),
-                    )
-
-                cur.execute(
-                    "UPDATE pending_subscriptions SET status = 'done' WHERE payment_id = %s",
-                    (payment_id,),
-                )
+                _activate_subscription(cur, login, tariff_id, payment_id)
             conn.commit()
         finally:
             conn.close()

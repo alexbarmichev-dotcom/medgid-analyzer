@@ -83,7 +83,7 @@ const StartFlow = () => {
         <div className="mb-8 text-center">
           <span className="mb-4 inline-flex items-center gap-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             <span className="h-[7px] w-[7px] rounded-full bg-accent" />
-            Личный кабинет
+            {authMode === 'anonymous' ? 'Разовый разбор' : 'Личный кабинет'}
           </span>
           <h2 className="font-head text-3xl font-extrabold tracking-[-0.03em] sm:text-4xl">
             Начните <span className="hand-underline text-accent">прямо сейчас</span>

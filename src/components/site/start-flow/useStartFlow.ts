@@ -17,7 +17,7 @@ import {
 } from '@/components/site/start-flow/uploadClient';
 import { IncompleteOrder } from '@/components/site/start-flow/IncompleteOrders';
 import { getDeviceId } from '@/lib/deviceId';
-import { getStoredToken, storeSession } from '@/lib/authStorage';
+import { getStoredLogin, getStoredToken, isGuestLogin, storeSession } from '@/lib/authStorage';
 import { START_FLOW_EVENT, StartIntentDetail } from '@/lib/startFlowBus';
 
 const AUTH_URL = 'https://functions.poehali.dev/8c1cf8ce-6c17-461b-aec5-95a01638aefa';
@@ -27,7 +27,7 @@ const HISTORY_URL = 'https://functions.poehali.dev/c6e19e20-72b0-4a41-b317-8eb65
 const POLL_INTERVAL_MS = 3000;
 const POLL_MAX_ATTEMPTS = 40; // ~2 минуты
 
-export type Step = 'auth' | 'form' | 'pay' | 'done';
+export type Step = 'auth' | 'form' | 'pay' | 'done' | 'locked';
 export type AuthMode = 'anonymous' | 'account';
 
 export const useStartFlow = () => {
@@ -165,7 +165,7 @@ export const useStartFlow = () => {
       const detail = (e as CustomEvent<StartIntentDetail>).detail;
       setIntent(detail.intent);
       if (detail.intent === 'anonymous') {
-        if (getStoredToken()) {
+        if (isGuestLogin(getStoredLogin())) {
           setStep('form');
         } else {
           setStep('auth');
@@ -347,19 +347,22 @@ export const useStartFlow = () => {
     }
   };
 
-  const onAuthSuccess = (token: string, login: string, isFreeFlag: boolean) => {
+  const onAuthSuccess = async (token: string, login: string, isFreeFlag: boolean) => {
     storeSession(token, login);
     setIsFree(isFreeFlag);
     setEmail((prev) => prev || authEmail.trim());
-    checkSubscriber();
+    const subscriber = await checkSubscriber();
+    if (!subscriber && !isFreeFlag) {
+      toast({ title: 'Добро пожаловать!', description: 'Личный кабинет доступен по подписке' });
+      setStep('locked');
+      if (intent === 'subscribe') {
+        document.querySelector('#pricing')?.scrollIntoView({ behavior: 'smooth' });
+      }
+      return;
+    }
     loadHistory();
     loadIncomplete();
-    if (intent === 'subscribe') {
-      toast({ title: 'Добро пожаловать!', description: 'Теперь нажмите «Оформить подписку»' });
-      document.querySelector('#pricing')?.scrollIntoView({ behavior: 'smooth' });
-    } else {
-      toast({ title: 'Добро пожаловать!' });
-    }
+    toast({ title: 'Добро пожаловать!' });
     setStep('form');
   };
 
@@ -461,6 +464,11 @@ export const useStartFlow = () => {
       return;
     }
     const freeAccess = isFree || (await checkSubscriber());
+    if (authMode === 'account' && !freeAccess) {
+      toast({ title: 'Подписка не активна', description: 'Личный кабинет доступен по подписке' });
+      setStep('locked');
+      return;
+    }
     if (sessionId && !freeAccess) {
       setStep('pay');
       return;
