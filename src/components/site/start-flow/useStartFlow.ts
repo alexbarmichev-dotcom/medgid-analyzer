@@ -17,7 +17,15 @@ import {
 } from '@/components/site/start-flow/uploadClient';
 import { IncompleteOrder } from '@/components/site/start-flow/IncompleteOrders';
 import { getDeviceId } from '@/lib/deviceId';
-import { getStoredLogin, getStoredToken, isGuestLogin, storeSession } from '@/lib/authStorage';
+import {
+  PAY_RETURN_PARAM,
+  getStoredLogin,
+  getStoredToken,
+  isGuestLogin,
+  savePendingPayment,
+  storeSession,
+  takePendingPayment,
+} from '@/lib/authStorage';
 import { START_FLOW_EVENT, StartIntentDetail } from '@/lib/startFlowBus';
 
 const AUTH_URL = 'https://functions.poehali.dev/8c1cf8ce-6c17-461b-aec5-95a01638aefa';
@@ -222,14 +230,9 @@ export const useStartFlow = () => {
 
   // восстановление после возврата с оплаты ЮKassa
   useEffect(() => {
-    let paymentId: string | null = null;
-    try {
-      paymentId = sessionStorage.getItem('medgid_pending_payment');
-      sessionStorage.removeItem('medgid_pending_payment');
-    } catch {
-      /* ignore */
-    }
+    const paymentId = takePendingPayment('medgid_pending_payment');
     if (!paymentId) return;
+    setTimeout(() => document.querySelector('#start')?.scrollIntoView({ behavior: 'smooth' }), 400);
 
     const token = getStoredToken();
     if (!token) return;
@@ -544,6 +547,7 @@ export const useStartFlow = () => {
       const token = getStoredToken() || '';
       const returnUrl = new URL(window.location.href);
       returnUrl.hash = '';
+      returnUrl.searchParams.set(PAY_RETURN_PARAM, 'one');
 
       const res = await fetch(`${ANALYZE_URL}?action=create_payment`, {
         method: 'POST',
@@ -565,11 +569,7 @@ export const useStartFlow = () => {
         return;
       }
 
-      try {
-        sessionStorage.setItem('medgid_pending_payment', data.paymentId);
-      } catch {
-        /* ignore */
-      }
+      savePendingPayment('medgid_pending_payment', data.paymentId);
       window.location.href = data.confirmationUrl;
     } catch {
       toast({ title: 'Ошибка сети, попробуйте ещё раз' });

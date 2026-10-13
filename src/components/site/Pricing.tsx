@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { toast } from '@/hooks/use-toast';
-import { getStoredLogin, getStoredToken, isGuestLogin } from '@/lib/authStorage';
+import {
+  PAY_RETURN_PARAM,
+  consumePayReturn,
+  getStoredLogin,
+  getStoredToken,
+  isGuestLogin,
+  savePendingPayment,
+  takePendingPayment,
+} from '@/lib/authStorage';
 import { emitStartIntent } from '@/lib/startFlowBus';
 import IndicatorsDialog from '@/components/site/start-flow/IndicatorsDialog';
 import ChatDialog from '@/components/site/start-flow/ChatDialog';
@@ -140,14 +148,15 @@ const Pricing = () => {
   useEffect(() => {
     loadTariffs();
     loadMyTariff();
-    try {
-      const pendingId = sessionStorage.getItem(PENDING_SUB_KEY);
-      if (pendingId) {
-        sessionStorage.removeItem(PENDING_SUB_KEY);
-        checkPendingSubscription(pendingId);
-      }
-    } catch {
-      /* ignore */
+    const returned = consumePayReturn() === 'sub';
+    const pendingId = takePendingPayment(PENDING_SUB_KEY);
+    if (pendingId) {
+      checkPendingSubscription(pendingId);
+    } else if (returned) {
+      recheckPayment();
+    }
+    if (returned || pendingId) {
+      setTimeout(() => scrollTo('#pricing'), 400);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -171,6 +180,7 @@ const Pricing = () => {
     try {
       const returnUrl = new URL(window.location.href);
       returnUrl.hash = '#pricing';
+      returnUrl.searchParams.set(PAY_RETURN_PARAM, 'sub');
       const res = await fetch(`${TARIFFS_URL}?action=create_payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Authorization': token },
@@ -181,11 +191,7 @@ const Pricing = () => {
         toast({ title: data.error || 'Не удалось создать платёж' });
         return;
       }
-      try {
-        sessionStorage.setItem(PENDING_SUB_KEY, data.paymentId);
-      } catch {
-        /* ignore */
-      }
+      savePendingPayment(PENDING_SUB_KEY, data.paymentId);
       window.location.href = data.confirmationUrl;
     } catch {
       toast({ title: 'Ошибка сети, попробуйте ещё раз' });

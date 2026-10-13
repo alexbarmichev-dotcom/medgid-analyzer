@@ -18,6 +18,42 @@ export const getStoredLogin = (): string | null => {
   }
 };
 
+export const PAY_RETURN_PARAM = 'pay_return';
+
+export const savePendingPayment = (key: string, paymentId: string) => {
+  try {
+    localStorage.setItem(key, JSON.stringify({ id: paymentId, at: Date.now() }));
+  } catch {
+    /* ignore storage errors */
+  }
+};
+
+export const takePendingPayment = (key: string): string | null => {
+  try {
+    const raw = localStorage.getItem(key);
+    localStorage.removeItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.id || Date.now() - Number(parsed.at) > 24 * 60 * 60 * 1000) return null;
+    return String(parsed.id);
+  } catch {
+    return null;
+  }
+};
+
+export const consumePayReturn = (): string | null => {
+  try {
+    const url = new URL(window.location.href);
+    const kind = url.searchParams.get(PAY_RETURN_PARAM);
+    if (!kind) return null;
+    url.searchParams.delete(PAY_RETURN_PARAM);
+    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+    return kind;
+  } catch {
+    return null;
+  }
+};
+
 export const isGuestLogin = (login: string | null): boolean =>
   !login || login.startsWith('guest:');
 
