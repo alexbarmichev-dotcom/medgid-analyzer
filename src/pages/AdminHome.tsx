@@ -15,6 +15,12 @@ const SECTIONS = [
     icon: 'CreditCard',
   },
   {
+    href: '/admin/subscriptions',
+    label: 'Подписки',
+    description: 'Оплаты подписок, неподтверждённые платежи и ручное включение подписки',
+    icon: 'KeyRound',
+  },
+  {
     href: '/admin/feedback',
     label: 'Обращения',
     description: 'Вопросы, предложения и жалобы от посетителей сайта',

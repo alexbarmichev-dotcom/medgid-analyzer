@@ -10,6 +10,7 @@ import Article from "./pages/Article";
 import AdminHome from "./pages/AdminHome";
 import AdminFeedback from "./pages/AdminFeedback";
 import AdminPayments from "./pages/AdminPayments";
+import AdminSubscriptions from "./pages/AdminSubscriptions";
 import AdminReviews from "./pages/AdminReviews";
 import NotFound from "./pages/NotFound";
 
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/admin" element={<AdminHome />} />
           <Route path="/admin/feedback" element={<AdminFeedback />} />
           <Route path="/admin/payments" element={<AdminPayments />} />
+          <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
           <Route path="/admin/reviews" element={<AdminReviews />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

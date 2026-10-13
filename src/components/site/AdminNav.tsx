@@ -4,6 +4,7 @@ import Icon from '@/components/ui/icon';
 const LINKS = [
   { href: '/admin', label: 'Главная', icon: 'LayoutGrid' },
   { href: '/admin/payments', label: 'Платежи и пользователи', icon: 'CreditCard' },
+  { href: '/admin/subscriptions', label: 'Подписки', icon: 'KeyRound' },
   { href: '/admin/feedback', label: 'Обращения', icon: 'MessageSquare' },
   { href: '/admin/reviews', label: 'Отзывы', icon: 'Star' },
 ];

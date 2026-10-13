@@ -22,21 +22,27 @@
       "name": "me with invalid token",
       "method": "GET",
       "path": "/?resource=me",
-      "headers": {"X-Authorization": "invalid.token"},
+      "headers": {
+        "X-Authorization": "invalid.token"
+      },
       "expectedStatus": 401
     },
     {
       "name": "create_payment without auth",
       "method": "POST",
       "path": "/?action=create_payment",
-      "body": {"tariffId": "sub_3m"},
+      "body": {
+        "tariffId": "sub_3m"
+      },
       "expectedStatus": 401
     },
     {
       "name": "check_payment without auth",
       "method": "POST",
       "path": "/?action=check_payment",
-      "body": {"paymentId": "test"},
+      "body": {
+        "paymentId": "test"
+      },
       "expectedStatus": 401
     },
     {
@@ -44,6 +50,21 @@
       "method": "GET",
       "path": "/",
       "expectedStatus": 405
+    },
+    {
+      "name": "admin without password",
+      "method": "GET",
+      "path": "/?resource=admin",
+      "expectedStatus": 401
+    },
+    {
+      "name": "admin grant without password",
+      "method": "POST",
+      "path": "/?action=admin_grant",
+      "body": {
+        "login": "x"
+      },
+      "expectedStatus": 401
     }
   ]
 }

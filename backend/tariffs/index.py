@@ -23,7 +23,7 @@ def _resp(status: int, body: Dict[str, Any]) -> Dict[str, Any]:
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, X-Authorization",
+            "Access-Control-Allow-Headers": "Content-Type, X-Authorization, X-Admin-Password",
         },
         "isBase64Encoded": False,
         "body": json.dumps(body, default=str),
@@ -392,12 +392,132 @@ def _handle_check_payment(dsn: str, login: str, body: Dict[str, Any]) -> Dict[st
     return _resp(200, {"ok": True, "status": "pending"})
 
 
+def _check_admin_auth(event: Dict[str, Any]) -> bool:
+    headers = event.get("headers") or {}
+    provided = headers.get("X-Admin-Password") or headers.get("x-admin-password") or ""
+    expected = os.environ.get("ADMIN_PASSWORD", "")
+    return bool(expected) and hmac.compare_digest(provided, expected)
+
+
+def _admin_list(dsn: str) -> Dict[str, Any]:
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT p.payment_id, p.login, p.tariff_id, p.amount, p.status, p.created_at, "
+                "u.current_tariff_id, u.tariff_status, u.tariff_expires_at "
+                "FROM pending_subscriptions p LEFT JOIN users u ON u.login = p.login "
+                "ORDER BY p.created_at DESC LIMIT 200"
+            )
+            payments = cur.fetchall()
+            cur.execute(
+                "SELECT login, current_tariff_id, tariff_started_at, tariff_expires_at, tariff_status "
+                "FROM users WHERE current_tariff_id IN ('sub_3m', 'sub_12m') "
+                "ORDER BY tariff_started_at DESC NULLS LAST LIMIT 200"
+            )
+            subscribers = cur.fetchall()
+    finally:
+        conn.close()
+    return {
+        "ok": True,
+        "payments": [
+            {
+                "paymentId": r["payment_id"],
+                "login": r["login"],
+                "tariffId": r["tariff_id"],
+                "amount": str(r["amount"]),
+                "status": r["status"],
+                "createdAt": r["created_at"].isoformat() if r["created_at"] else None,
+                "userTariffId": r["current_tariff_id"],
+                "userTariffStatus": r["tariff_status"],
+                "userExpiresAt": r["tariff_expires_at"].isoformat() if r["tariff_expires_at"] else None,
+            }
+            for r in payments
+        ],
+        "subscribers": [
+            {
+                "login": r["login"],
+                "tariffId": r["current_tariff_id"],
+                "startedAt": r["tariff_started_at"].isoformat() if r["tariff_started_at"] else None,
+                "expiresAt": r["tariff_expires_at"].isoformat() if r["tariff_expires_at"] else None,
+                "status": r["tariff_status"],
+            }
+            for r in subscribers
+        ],
+    }
+
+
+def _admin_check(dsn: str, body: Dict[str, Any]) -> Dict[str, Any]:
+    payment_id = str(body.get("paymentId") or "")
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT login, tariff_id, status FROM pending_subscriptions WHERE payment_id = %s",
+                (payment_id,),
+            )
+            pending = cur.fetchone()
+    finally:
+        conn.close()
+    if not pending:
+        return _resp(404, {"error": "Платёж не найден"})
+    login, tariff_id, status = pending
+    if status == "done":
+        return _resp(200, {"ok": True, "result": "already_done"})
+    try:
+        payment = _yookassa_request("GET", f"/payments/{payment_id}")
+    except Exception:
+        return _resp(502, {"error": "Не удалось запросить статус в ЮKassa"})
+    yk_status = payment.get("status")
+    if yk_status == "succeeded":
+        conn = psycopg2.connect(dsn)
+        try:
+            with conn.cursor() as cur:
+                _activate_subscription(cur, login, tariff_id, payment_id)
+            conn.commit()
+        finally:
+            conn.close()
+        return _resp(200, {"ok": True, "result": "activated"})
+    if yk_status == "canceled":
+        conn = psycopg2.connect(dsn)
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE pending_subscriptions SET status = 'canceled' WHERE payment_id = %s",
+                    (payment_id,),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+        return _resp(200, {"ok": True, "result": "canceled"})
+    return _resp(200, {"ok": True, "result": "pending", "ykStatus": yk_status})
+
+
+def _admin_grant(dsn: str, body: Dict[str, Any]) -> Dict[str, Any]:
+    login = str(body.get("login") or "").strip()
+    tariff_id = str(body.get("tariffId") or "sub_12m")
+    payment_id = str(body.get("paymentId") or "")
+    if tariff_id not in SUBSCRIPTION_TARIFF_IDS:
+        return _resp(400, {"error": "Недопустимый тариф"})
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM users WHERE login = %s", (login,))
+            if not cur.fetchone():
+                return _resp(404, {"error": "Пользователь не найден"})
+            _activate_subscription(cur, login, tariff_id, payment_id)
+        conn.commit()
+    finally:
+        conn.close()
+    return _resp(200, {"ok": True, "result": "granted"})
+
+
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Business: управляет тарифами ЛабГид (разовая оплата, подписки 3 и 12 месяцев).
     resource=list — публичный список активных тарифов; resource=me — текущий тариф
     пользователя и статус лимита AI-чата (требует авторизации). action=create_payment
-    создаёт платёж ЮKassa на подписку; action=check_payment проверяет оплату и при
+    создаёт платёж ЮKassa на подписку; resource=admin (пароль в X-Admin-Password) — платежи и подписчики, action=admin_check/admin_grant — перепроверка платежа и ручное включение подписки; action=check_payment проверяет оплату и при
     успехе активирует тариф пользователю (для sub_12m создаёт первый период AI-чата).
     Args: event с httpMethod, queryStringParameters {resource, action}, headers.X-Authorization,
           body {tariffId, returnUrl} для create_payment, body {paymentId} для check_payment
@@ -412,6 +532,21 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     if method == "GET" and params.get("resource") == "list":
         return _resp(200, {"ok": True, "items": _list_tariffs(dsn)})
+
+    if params.get("resource") == "admin" or str(params.get("action", "")).startswith("admin_"):
+        if not _check_admin_auth(event):
+            return _resp(401, {"error": "Неверный пароль администратора"})
+        if method == "GET":
+            return _resp(200, _admin_list(dsn))
+        try:
+            admin_body = json.loads(event.get("body") or "{}")
+        except Exception:
+            return _resp(400, {"error": "Некорректный запрос"})
+        if params.get("action") == "admin_check":
+            return _admin_check(dsn, admin_body)
+        if params.get("action") == "admin_grant":
+            return _admin_grant(dsn, admin_body)
+        return _resp(400, {"error": "Неизвестное действие"})
 
     login = _get_login(event)
 
