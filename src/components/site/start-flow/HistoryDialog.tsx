@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Icon from '@/components/ui/icon';
 import AnalysisMarkdown from '@/components/site/AnalysisMarkdown';
 import { downloadAnalysisPdf } from '@/lib/pdf';
+import CompareDialog from '@/components/site/start-flow/CompareDialog';
 import IncompleteOrders, { IncompleteOrder } from '@/components/site/start-flow/IncompleteOrders';
 import {
   Accordion,
@@ -66,6 +67,15 @@ const HistoryDialog = ({
   onDismiss,
 }: HistoryDialogProps) => {
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const [compare, setCompare] = useState<{ current: HistoryItem; previous: HistoryItem } | null>(null);
+
+  const findPrevious = (item: HistoryItem): HistoryItem | null => {
+    const t = item.date ? new Date(item.date).getTime() : 0;
+    const older = history
+      .filter((h) => h.id !== item.id && h.result && (h.date ? new Date(h.date).getTime() : 0) < t)
+      .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+    return older[0] || null;
+  };
 
   const handleDownload = async (item: HistoryItem) => {
     if (!item.result) return;
@@ -158,6 +168,15 @@ const HistoryDialog = ({
                     ) : (
                       <p>Результат обрабатывается</p>
                     )}
+                    {item.result && findPrevious(item) && (
+                      <button
+                        onClick={() => setCompare({ current: item, previous: findPrevious(item)! })}
+                        className="mr-2 mt-2 inline-flex items-center gap-2 rounded-[var(--radius)] border border-hand/40 bg-hand/10 px-4 py-2 text-sm font-semibold text-hand"
+                      >
+                        <Icon name="GitCompare" size={15} />
+                        Сравнить с предыдущим анализом
+                      </button>
+                    )}
                     {item.result && (
                       <button
                         onClick={() => handleDownload(item)}
@@ -179,6 +198,13 @@ const HistoryDialog = ({
           </Accordion>
         )}
       </DialogContent>
+      <CompareDialog
+        open={compare !== null}
+        onOpenChange={(v) => !v && setCompare(null)}
+        current={compare?.current ?? null}
+        previous={compare?.previous ?? null}
+        formatDate={formatDate}
+      />
     </Dialog>
   );
 };
