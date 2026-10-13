@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { ChartBlock, ChartData, ChartPoint, parseChart } from '@/components/site/AnalysisMarkdown';
 import { getStoredToken } from '@/lib/authStorage';
+import { downloadIndicatorsPdf } from '@/lib/pdf';
 import {
   Dialog,
   DialogContent,
@@ -70,6 +71,7 @@ const IndicatorsDialog = ({ open, onOpenChange }: IndicatorsDialogProps) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [onlyAbnormal, setOnlyAbnormal] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -96,6 +98,15 @@ const IndicatorsDialog = ({ open, onOpenChange }: IndicatorsDialogProps) => {
   }, [items]);
 
   const visible = onlyAbnormal ? indicators.filter((i) => i.outOfRange) : indicators;
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      await downloadIndicatorsPdf(visible);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const abnormalCount = indicators.filter((i) => i.outOfRange).length;
 
   return (
@@ -142,6 +153,19 @@ const IndicatorsDialog = ({ open, onOpenChange }: IndicatorsDialogProps) => {
                 </label>
               )}
             </div>
+
+            <button
+              onClick={handleDownload}
+              disabled={downloading || visible.length === 0}
+              className="inline-flex items-center justify-center gap-2 self-start rounded-[var(--radius)] border border-border bg-background px-5 py-2.5 text-sm font-semibold text-ink-soft disabled:opacity-60"
+            >
+              <Icon
+                name={downloading ? 'Loader2' : 'Download'}
+                size={16}
+                className={downloading ? 'animate-spin' : ''}
+              />
+              {downloading ? 'Готовим PDF…' : 'Скачать в PDF'}
+            </button>
 
             <div className="flex-1 space-y-1 overflow-y-auto pr-1">
               {visible.map((ind) => {
