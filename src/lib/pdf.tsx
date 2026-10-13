@@ -130,6 +130,50 @@ export const downloadIndicatorsPdf = async (indicators: IndicatorForPdf[]) => {
           return (
             <div data-pdf-block key={i} style={{ paddingBottom: 14 }}>
               <ChartBlock data={ind} fixedWidth={690} />
+              <table
+                style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: 11,
+                  margin: '4px 0 8px',
+                }}
+              >
+                <thead>
+                  <tr style={{ background: '#f4f2ec', textAlign: 'left' }}>
+                    <th style={{ padding: '4px 8px' }}>Дата</th>
+                    <th style={{ padding: '4px 8px' }}>Значение{ind.unit ? `, ${ind.unit}` : ''}</th>
+                    <th style={{ padding: '4px 8px' }}>Норма</th>
+                    <th style={{ padding: '4px 8px' }}>Оценка</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ind.points.map((pt, j) => {
+                    const low = ind.min !== null && ind.min !== undefined && pt.value < ind.min;
+                    const high = ind.max !== null && ind.max !== undefined && pt.value > ind.max;
+                    const hasRange =
+                      (ind.min !== null && ind.min !== undefined) ||
+                      (ind.max !== null && ind.max !== undefined);
+                    return (
+                      <tr key={j} style={{ borderBottom: '1px solid #e6e3da' }}>
+                        <td style={{ padding: '4px 8px' }}>{pt.date}</td>
+                        <td style={{ padding: '4px 8px', fontWeight: 700 }}>{pt.value}</td>
+                        <td style={{ padding: '4px 8px', color: '#6b6b63' }}>
+                          {hasRange ? `${ind.min ?? '…'} – ${ind.max ?? '…'}` : '—'}
+                        </td>
+                        <td
+                          style={{
+                            padding: '4px 8px',
+                            color: low || high ? '#b3261e' : '#2f7a57',
+                            fontWeight: low || high ? 700 : 400,
+                          }}
+                        >
+                          {low ? 'ниже нормы' : high ? 'выше нормы' : hasRange ? 'в норме' : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
               <p
                 style={{
                   fontSize: 12,
