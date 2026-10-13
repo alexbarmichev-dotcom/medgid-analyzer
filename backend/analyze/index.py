@@ -5,6 +5,7 @@ import hmac
 import hashlib
 import base64
 import uuid
+import html as html_lib
 import smtplib
 import time
 from datetime import datetime
@@ -224,28 +225,46 @@ def _save_analysis(dsn: str, login: str, gender: str, age: Optional[int], compla
         conn.close()
 
 
-def _send_result_email(email: str, ai_result: str) -> None:
+def _send_result_email(email: Optional[str], ai_result: str, login: str = "",
+                       site_url: Optional[str] = None) -> None:
     smtp_login = os.environ.get("MAILRU_SMTP_LOGIN")
     smtp_password = os.environ.get("MAILRU_SMTP_PASSWORD")
-    if not smtp_login or not smtp_password:
+    to = email or (login if "@" in login and not login.startswith(("guest:", "acct:")) else None)
+    if not to or not smtp_login or not smtp_password:
         return
 
-    html = (
-        "<h2>Ваша расшифровка анализа готова</h2>"
-        "<p>Результат также доступен в личном кабинете ЛабГид.</p>"
-        f"<div style='white-space:pre-wrap'>{CHART_RE.sub('', ai_result)[:5000]}</div>"
+    button = ""
+    if site_url:
+        link = html_lib.escape(site_url.rstrip("/") + "/#start", quote=True)
+        button = (
+            f"<p style='margin:20px 0'><a href='{link}' style='display:inline-block;"
+            "background:#2f7d6d;color:#fff;text-decoration:none;padding:12px 22px;"
+            "border-radius:10px;font-weight:bold'>Открыть личный кабинет</a></p>"
+        )
+    text = html_lib.escape(CHART_RE.sub("", ai_result).strip()[:5000])
+    body = (
+        "<div style='font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#222;"
+        "max-width:600px'>"
+        "<h2 style='margin:0 0 12px'>Ваша расшифровка анализов готова</h2>"
+        "<p>Мы закончили разбор. Полный результат с графиками сохранён в личном кабинете "
+        "ЛабГид, в разделе «История».</p>"
+        f"{button}"
+        f"<div style='white-space:pre-wrap;border-top:1px solid #ddd;padding-top:14px'>{text}</div>"
+        "<p style='font-size:12px;color:#777;margin-top:20px'>Расшифровка носит справочный "
+        "характер и не заменяет консультацию врача.</p>"
+        "</div>"
     )
-    msg = MIMEText(html, "html", "utf-8")
-    msg["Subject"] = Header("ЛабГид — расшифровка анализа готова", "utf-8")
+    msg = MIMEText(body, "html", "utf-8")
+    msg["Subject"] = Header("ЛабГид — расшифровка анализов готова", "utf-8")
     msg["From"] = smtp_login
-    msg["To"] = email
+    msg["To"] = to
 
     try:
-        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=15) as server:
+        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=8) as server:
             server.login(smtp_login, smtp_password)
-            server.sendmail(smtp_login, [email], msg.as_string())
-    except Exception:
-        pass
+            server.sendmail(smtp_login, [to], msg.as_string())
+    except Exception as e:
+        print(f"result email failed: {e}")
 
 
 def _is_user_free(dsn: str, login: str) -> bool:
@@ -496,8 +515,11 @@ def _handle_check_payment(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
         if session_id:
             uploads.set_status(session_id, "done")
         _mark_one_time_used(dsn, login)
-        if email:
-            _send_result_email(email, ai_result)
+        site_url = None
+        if session_id:
+            sess = uploads.get_session(session_id, login)
+            site_url = sess.get("site_url") if sess else None
+        _send_result_email(email, ai_result, login, site_url)
         return _resp(200, {"ok": True, "status": "done", "id": analysis_id, "result": ai_result})
 
     if yk_status == "canceled":
@@ -563,8 +585,7 @@ def _handle_free_analysis(login: str, body: Dict[str, Any]) -> Dict[str, Any]:
     jobs.finish(job_key, "done", analysis_id=analysis_id, result=ai_result)
     uploads.set_status(session["id"], "done")
 
-    if email:
-        _send_result_email(email, ai_result)
+    _send_result_email(email, ai_result, login, session.get("site_url"))
 
     return _resp(200, {"ok": True, "id": analysis_id, "result": ai_result})
 

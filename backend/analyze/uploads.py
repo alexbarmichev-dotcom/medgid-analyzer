@@ -68,7 +68,7 @@ def get_session(session_id: str, login: str) -> Optional[Dict[str, Any]]:
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT id, login, status, file_count, declared_bytes, uploaded_bytes, files, "
-                "gender, age, complaints, conditions, meds, email, payment_id "
+                "gender, age, complaints, conditions, meds, email, payment_id, site_url "
                 "FROM upload_sessions WHERE id = %s",
                 (session_id,),
             )
@@ -78,7 +78,7 @@ def get_session(session_id: str, login: str) -> Optional[Dict[str, Any]]:
     if not row or row[1] != login:
         return None
     keys = ["id", "login", "status", "file_count", "declared_bytes", "uploaded_bytes", "files",
-            "gender", "age", "complaints", "conditions", "meds", "email", "payment_id"]
+            "gender", "age", "complaints", "conditions", "meds", "email", "payment_id", "site_url"]
     data = dict(zip(keys, row))
     data["files"] = _load_files(data["files"])
     return data
