@@ -19,9 +19,7 @@ import { IncompleteOrder } from '@/components/site/start-flow/IncompleteOrders';
 import { getDeviceId } from '@/lib/deviceId';
 import {
   PAY_RETURN_PARAM,
-  getStoredLogin,
   getStoredToken,
-  isGuestLogin,
   savePendingPayment,
   storeSession,
   takePendingPayment,
@@ -174,7 +172,7 @@ export const useStartFlow = () => {
       const detail = (e as CustomEvent<StartIntentDetail>).detail;
       setIntent(detail.intent);
       if (detail.intent === 'anonymous') {
-        if (isGuestLogin(getStoredLogin())) {
+        if (getStoredToken()) {
           setStep('form');
         } else {
           setStep('auth');

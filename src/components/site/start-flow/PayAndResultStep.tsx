@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getStoredLogin, isGuestLogin } from '@/lib/authStorage';
 import Icon from '@/components/ui/icon';
 import AnalysisMarkdown from '@/components/site/AnalysisMarkdown';
 import { downloadAnalysisPdf } from '@/lib/pdf';
@@ -123,6 +124,7 @@ export const DoneStep = ({ aiResult, reset, openHistory, openChat }: DoneStepPro
             Ваша медицинская история
           </button>
         </div>
+        {!isGuestLogin(getStoredLogin()) && (
         <button
           onClick={openChat}
           className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius)] border border-hand/30 bg-background px-6 py-3.5 text-sm font-semibold text-hand transition-transform hover:-translate-y-0.5 sm:w-auto sm:mx-auto"
@@ -130,6 +132,7 @@ export const DoneStep = ({ aiResult, reset, openHistory, openChat }: DoneStepPro
           <Icon name="MessageCircle" size={18} />
           Задать вопрос по анализам в AI-чате
         </button>
+        )}
       </div>
     </div>
   );
