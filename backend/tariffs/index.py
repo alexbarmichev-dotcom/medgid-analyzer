@@ -1,4 +1,5 @@
 import json
+import re
 import os
 import hmac
 import hashlib
@@ -213,7 +214,7 @@ def _handle_me(dsn: str, login: str) -> Dict[str, Any]:
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT current_tariff_id, tariff_started_at, tariff_expires_at, tariff_status, "
-                "full_name FROM users WHERE login = %s",
+                "full_name, notify_email FROM users WHERE login = %s",
                 (login,),
             )
             row = cur.fetchone()
@@ -221,7 +222,7 @@ def _handle_me(dsn: str, login: str) -> Dict[str, Any]:
                 conn.commit()
                 return _resp(404, {"error": "Пользователь не найден"})
 
-            tariff_id, started_at, expires_at, status, full_name = row
+            tariff_id, started_at, expires_at, status, full_name, notify_email = row
             status = _ensure_expiry(cur, login, tariff_id, status, expires_at)
 
             chat_info = None
@@ -242,6 +243,7 @@ def _handle_me(dsn: str, login: str) -> Dict[str, Any]:
         "tariffStatus": status,
         "chatUsage": chat_info,
         "fullName": full_name,
+        "notifyEmail": notify_email,
     })
 
 
@@ -528,6 +530,23 @@ def _handle_set_name(dsn: str, login: str, body: Dict[str, Any]) -> Dict[str, An
     return _resp(200, {"ok": True, "fullName": name or None})
 
 
+def _handle_set_email(dsn: str, login: str, body: Dict[str, Any]) -> Dict[str, Any]:
+    email = str(body.get("email") or "").strip()[:255]
+    if email and not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        return _resp(400, {"error": "Некорректный email"})
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE users SET notify_email = %s WHERE login = %s",
+                (email or None, login),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+    return _resp(200, {"ok": True, "notifyEmail": email or None})
+
+
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Business: управляет тарифами ЛабГид (разовая оплата, подписки 3 и 12 месяцев).
@@ -585,6 +604,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             return _handle_create_payment(dsn, login, body)
         if action == "check_payment":
             return _handle_check_payment(dsn, login, body)
+        if action == "set_email":
+            return _handle_set_email(dsn, login, body)
         if action == "set_name":
             return _handle_set_name(dsn, login, body)
         return _resp(400, {"error": "Неизвестное действие"})

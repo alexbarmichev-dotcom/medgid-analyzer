@@ -130,6 +130,7 @@ export const useStartFlow = () => {
       const active = res.ok && data.tariffId === 'sub_12m' && data.tariffStatus === 'active';
       setIsSubscriber(active);
       if (res.ok && data.fullName) setFullName((prev) => prev || data.fullName);
+      if (res.ok && data.notifyEmail) setEmail((prev) => prev || data.notifyEmail);
       if (active) setIsFree(true);
       return active;
     } catch {
@@ -508,8 +509,20 @@ export const useStartFlow = () => {
     }).catch(() => undefined);
   };
 
+  const saveNotifyEmail = () => {
+    const token = getStoredToken();
+    const value = email.trim();
+    if (!token || !value || !EMAIL_RE.test(value)) return;
+    fetch(`${TARIFFS_URL}?action=set_email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Authorization': token },
+      body: JSON.stringify({ email: value }),
+    }).catch(() => undefined);
+  };
+
   const onSubmit = async () => {
     saveFullName();
+    saveNotifyEmail();
     if (!gender || !age) {
       toast({ title: 'Укажите пол и возраст' });
       return;
