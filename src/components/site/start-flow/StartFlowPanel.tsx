@@ -62,6 +62,7 @@ interface StartFlowPanelProps {
   reset: () => void;
   openHistory: () => void;
   openChat: () => void;
+  openIndicators: () => void;
 }
 
 const StartFlowPanel = ({
@@ -121,6 +122,7 @@ const StartFlowPanel = ({
   reset,
   openHistory,
   openChat,
+  openIndicators,
 }: StartFlowPanelProps) => {
   return (
     <>
@@ -161,6 +163,15 @@ const StartFlowPanel = ({
             >
               <Icon name="MessageCircle" size={20} />
               AI-чат по анализам
+            </button>
+          )}
+          {isSubscriber && (
+            <button
+              onClick={openIndicators}
+              className="inline-flex items-center gap-2 text-lg font-semibold text-hand hover:underline"
+            >
+              <Icon name="LineChart" size={20} />
+              Мои показатели
             </button>
           )}
         </div>

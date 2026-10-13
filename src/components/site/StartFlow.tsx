@@ -2,10 +2,12 @@ import { useState } from 'react';
 import HistoryDialog from '@/components/site/start-flow/HistoryDialog';
 import StartFlowPanel from '@/components/site/start-flow/StartFlowPanel';
 import ChatDialog from '@/components/site/start-flow/ChatDialog';
+import IndicatorsDialog from '@/components/site/start-flow/IndicatorsDialog';
 import { useStartFlow } from '@/components/site/start-flow/useStartFlow';
 
 const StartFlow = () => {
   const [chatOpen, setChatOpen] = useState(false);
+  const [indicatorsOpen, setIndicatorsOpen] = useState(false);
   const {
     step,
     setStep,
@@ -150,6 +152,7 @@ const StartFlow = () => {
           reset={reset}
           openHistory={openHistory}
           openChat={() => setChatOpen(true)}
+          openIndicators={() => setIndicatorsOpen(true)}
         />
       </div>
 
@@ -166,6 +169,7 @@ const StartFlow = () => {
       />
 
       <ChatDialog open={chatOpen} onOpenChange={setChatOpen} />
+      <IndicatorsDialog open={indicatorsOpen} onOpenChange={setIndicatorsOpen} />
     </section>
   );
 };
