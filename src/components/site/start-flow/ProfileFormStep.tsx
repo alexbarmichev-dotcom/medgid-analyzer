@@ -166,7 +166,7 @@ const ProfileFormStep = ({
           onChange={(e) => setEmail(e.target.value)}
         />
         <p className="text-xs text-muted-foreground">
-          Пришлём результат расшифровки на почту, когда он будет готов
+          Можно закрыть страницу, мы пришлём письмо, когда расшифровка будет готова
         </p>
       </div>
 
