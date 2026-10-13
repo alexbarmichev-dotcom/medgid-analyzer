@@ -65,6 +65,7 @@ export const useStartFlow = () => {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [isFree, setIsFree] = useState(false);
   const [recheckingSub, setRecheckingSub] = useState(false);
+  const [isSubscriber, setIsSubscriber] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [uploadFileIndex, setUploadFileIndex] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -123,6 +124,7 @@ export const useStartFlow = () => {
       const res = await fetch(`${TARIFFS_URL}?resource=me`, { headers: { 'X-Authorization': token } });
       const data = await res.json();
       const active = res.ok && data.tariffId === 'sub_12m' && data.tariffStatus === 'active';
+      setIsSubscriber(active);
       if (active) setIsFree(true);
       return active;
     } catch {
@@ -223,6 +225,11 @@ export const useStartFlow = () => {
         });
       }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (getStoredToken()) checkSubscriber();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -742,6 +749,7 @@ export const useStartFlow = () => {
     isFree,
     recheckingSub,
     recheckSubscription,
+    isSubscriber,
     uploadProgress,
     uploadFileIndex,
     incomplete,

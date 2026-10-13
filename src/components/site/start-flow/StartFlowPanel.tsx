@@ -35,6 +35,7 @@ interface StartFlowPanelProps {
   isFree: boolean;
   recheckingSub: boolean;
   recheckSubscription: () => void;
+  isSubscriber: boolean;
   gender: 'm' | 'f' | '';
   setGender: (gender: 'm' | 'f' | '') => void;
   age: string;
@@ -93,6 +94,7 @@ const StartFlowPanel = ({
   isFree,
   recheckingSub,
   recheckSubscription,
+  isSubscriber,
   gender,
   setGender,
   age,
@@ -139,7 +141,7 @@ const StartFlowPanel = ({
       </div>
 
       {step !== 'auth' && step !== 'locked' && (
-        <div className="mb-4 flex justify-center">
+        <div className="mb-4 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
           <button
             onClick={openHistory}
             className="inline-flex items-center gap-2 text-lg font-semibold text-hand hover:underline"
@@ -152,6 +154,15 @@ const StartFlowPanel = ({
               </span>
             )}
           </button>
+          {isSubscriber && (
+            <button
+              onClick={openChat}
+              className="inline-flex items-center gap-2 text-lg font-semibold text-hand hover:underline"
+            >
+              <Icon name="MessageCircle" size={20} />
+              AI-чат по анализам
+            </button>
+          )}
         </div>
       )}
 

@@ -52,6 +52,7 @@ const StartFlow = () => {
     isFree,
     recheckingSub,
     recheckSubscription,
+    isSubscriber,
     uploadProgress,
     uploadFileIndex,
     incomplete,
@@ -122,6 +123,7 @@ const StartFlow = () => {
           isFree={isFree}
           recheckingSub={recheckingSub}
           recheckSubscription={recheckSubscription}
+          isSubscriber={isSubscriber}
           gender={gender}
           setGender={setGender}
           age={age}
