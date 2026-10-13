@@ -67,9 +67,26 @@ const Article = () => {
           )}
 
           <div className="mt-8 space-y-5 text-[1.05rem] leading-relaxed text-ink-soft">
-            {article.paragraphs.map((p, i) => (
-              <p key={i}>{p}</p>
-            ))}
+            {article.paragraphs.map((p, i) => {
+              if (p.startsWith('### ')) {
+                return (
+                  <h3 key={i} className="pt-2 font-head text-lg font-bold text-foreground">
+                    {p.slice(4)}
+                  </h3>
+                );
+              }
+              if (p.startsWith('## ')) {
+                return (
+                  <h2
+                    key={i}
+                    className="pt-4 font-head text-2xl font-extrabold leading-tight text-foreground"
+                  >
+                    {p.slice(3)}
+                  </h2>
+                );
+              }
+              return <p key={i}>{p}</p>;
+            })}
           </div>
 
           <p className="mt-10 font-caveat text-2xl text-hand">{article.author}</p>
