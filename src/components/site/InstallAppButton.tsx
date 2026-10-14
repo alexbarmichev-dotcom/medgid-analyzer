@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
+import InstallGuideIllustration from '@/components/site/InstallGuideIllustration';
 import {
   Dialog,
   DialogContent,
@@ -135,6 +136,7 @@ const InstallAppButton = ({ className = '', onDone }: InstallAppButtonProps) => 
                     </span>
                   )}
                 </h3>
+                <InstallGuideIllustration device={g.key} />
                 <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-sm leading-relaxed text-ink-soft">
                   {g.steps.map((step) => (
                     <li key={step}>{step}</li>
