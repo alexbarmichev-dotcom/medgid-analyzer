@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import Logo from './Logo';
+import InstallAppButton from './InstallAppButton';
 
 const NAV = [
   { label: 'Как это работает', href: '#how' },
@@ -65,6 +66,7 @@ const Header = () => {
               {n.label}
             </button>
           ))}
+          <InstallAppButton className="inline-flex items-center gap-2 rounded-[var(--radius)] border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted" />
           <button
             onClick={() => go('#start')}
             className="inline-flex items-center gap-2 rounded-[var(--radius)] bg-hand px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:-translate-y-0.5"
@@ -95,6 +97,10 @@ const Header = () => {
                 {n.label}
               </button>
             ))}
+            <InstallAppButton
+              onDone={() => setOpen(false)}
+              className="mt-2 inline-flex items-center justify-center gap-2 rounded-[var(--radius)] border border-border px-5 py-3 text-base font-semibold text-foreground"
+            />
             <button
               onClick={() => go('#start')}
               className="mt-2 inline-flex items-center justify-center gap-2 rounded-[var(--radius)] bg-accent px-5 py-3 text-base font-semibold text-accent-foreground"
