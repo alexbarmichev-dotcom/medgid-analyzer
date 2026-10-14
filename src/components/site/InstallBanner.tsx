@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import InstallAppButton from '@/components/site/InstallAppButton';
 
+const SHOW_DELAY_MS = 6000;
 const STORAGE_KEY = 'labgid_install_banner_closed';
 
 const isStandalone = () =>
@@ -23,10 +24,16 @@ const InstallBanner = () => {
 
   useEffect(() => {
     if (readClosed() || isStandalone()) return;
-    setVisible(true);
-    const hide = () => setVisible(false);
+    const timer = window.setTimeout(() => setVisible(true), SHOW_DELAY_MS);
+    const hide = () => {
+      window.clearTimeout(timer);
+      setVisible(false);
+    };
     window.addEventListener('appinstalled', hide);
-    return () => window.removeEventListener('appinstalled', hide);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('appinstalled', hide);
+    };
   }, []);
 
   const close = () => {
