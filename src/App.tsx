@@ -13,6 +13,7 @@ import AdminPayments from "./pages/AdminPayments";
 import AdminSubscriptions from "./pages/AdminSubscriptions";
 import AdminReviews from "./pages/AdminReviews";
 import NotFound from "./pages/NotFound";
+import InstallBanner from "@/components/site/InstallBanner";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <InstallBanner />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
