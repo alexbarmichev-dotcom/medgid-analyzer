@@ -23,25 +23,9 @@ const Faq = () => {
       'Ответы на частые вопросы о сервисе ЛабГид: как расшифровать анализы онлайн, сколько это стоит, какие данные учитываются и как обеспечивается безопасность.'
     );
 
-    const script = document.createElement('script');
-    script.type = 'application/ld+json';
-    script.text = JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': 'FAQPage',
-      mainEntity: FAQ_GROUPS.flatMap((group) =>
-        group.items.map((item) => ({
-          '@type': 'Question',
-          name: item.q,
-          acceptedAnswer: { '@type': 'Answer', text: item.a },
-        }))
-      ),
-    });
-    document.head.appendChild(script);
-
     return () => {
       document.title = prevTitle;
       metaDescription?.setAttribute('content', prevDescription);
-      document.head.removeChild(script);
     };
   }, []);
 

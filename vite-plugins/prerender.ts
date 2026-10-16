@@ -6,6 +6,41 @@ import { FAQ_GROUPS } from '../src/data/faq';
 
 const SITE = 'https://лаб-гид.рф';
 
+const LOGO =
+  'https://cdn.poehali.dev/projects/a50bf440-39eb-48cd-8c9b-26529e75ba50/bucket/4f83188a-9df1-4eba-ac26-2ef05362e375.jpg';
+
+const ORG = {
+  '@type': 'Organization',
+  '@id': `${SITE}/#organization`,
+  name: 'ЛабГид',
+  url: `${SITE}/`,
+  logo: LOGO,
+  description:
+    'Сервис расшифровки анализов онлайн простым языком: объясняет показатели, оценивает отклонения от нормы и готовит вопросы для врача.',
+  areaServed: 'RU',
+  availableLanguage: 'ru',
+};
+
+const breadcrumbs = (items: { name: string; path: string }[]) => ({
+  '@type': 'BreadcrumbList',
+  itemListElement: items.map((it, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    name: it.name,
+    item: `${SITE}${it.path}`,
+  })),
+});
+
+const ldScripts = (items: object[]) =>
+  items
+    .map(
+      (o) =>
+        `<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', ...o }).replace(/</g, '\\u003c')}</script>`
+    )
+    .join('\n');
+
+const LD_BLOCK = /<script type="application\/ld\+json">[\s\S]*?<\/script>\s*/g;
+
 const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -50,7 +85,14 @@ const articleBody = (slug: string) => {
     .join('')}</article></main>${footer}`;
 };
 
-const withMeta = (html: string, body: string, title: string, description: string, urlPath: string) => {
+const withMeta = (
+  html: string,
+  body: string,
+  title: string,
+  description: string,
+  urlPath: string,
+  ld?: object[]
+) => {
   const url = `${SITE}${urlPath}`;
   let out = html.replace('<div id="root"></div>', `<div id="root">${body}</div>`);
   out = out.replace(/<title>[\s\S]*?<\/title>/, `<title>${esc(title)}</title>`);
@@ -65,6 +107,10 @@ const withMeta = (html: string, body: string, title: string, description: string
     /(<meta property="og:description" content=")[\s\S]*?(")/,
     `$1${esc(description)}$2`
   );
+  if (ld) {
+    out = out.replace(LD_BLOCK, '');
+    out = out.replace('</head>', `${ldScripts(ld)}\n</head>`);
+  }
   return out;
 };
 
@@ -72,6 +118,36 @@ const write = (dir: string, rel: string, content: string) => {
   const file = path.join(dir, rel, 'index.html');
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, content);
+};
+
+const faqEntities = () =>
+  FAQ_GROUPS.flatMap((g) =>
+    g.items.map((i) => ({
+      '@type': 'Question',
+      name: i.q,
+      acceptedAnswer: { '@type': 'Answer', text: i.a },
+    }))
+  );
+
+const homeLd = (base: string) => {
+  const blocks = [...base.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => {
+    const o = JSON.parse(m[1]);
+    delete o['@context'];
+    return o;
+  });
+  const keep = blocks.filter((b) => b['@type'] === 'MedicalWebPage' || b['@type'] === 'FAQPage');
+  return [
+    ORG,
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE}/#website`,
+      url: `${SITE}/`,
+      name: 'ЛабГид',
+      inLanguage: 'ru-RU',
+      publisher: { '@id': `${SITE}/#organization` },
+    },
+    ...keep,
+  ];
 };
 
 export default function prerender(): Plugin {
@@ -90,7 +166,7 @@ export default function prerender(): Plugin {
       const homeDesc =
         'ЛабГид объясняет каждый показатель анализов простым языком, оценивает отклонения от нормы и готовит список вопросов для врача.';
 
-      fs.writeFileSync(indexPath, withMeta(base, homeBody(), homeTitle, homeDesc, '/'));
+      fs.writeFileSync(indexPath, withMeta(base, homeBody(), homeTitle, homeDesc, '/', homeLd(base)));
 
       write(
         outDir,
@@ -100,7 +176,15 @@ export default function prerender(): Plugin {
           faqBody(),
           'Частые вопросы о расшифровке анализов — ЛабГид',
           'Ответы на частые вопросы о сервисе ЛабГид: как расшифровать анализы онлайн, сколько это стоит, какие данные учитываются и как обеспечивается безопасность.',
-          '/faq'
+          '/faq',
+          [
+            ORG,
+            breadcrumbs([
+              { name: 'Главная', path: '/' },
+              { name: 'Частые вопросы', path: '/faq' },
+            ]),
+            { '@type': 'FAQPage', mainEntity: faqEntities() },
+          ]
         )
       );
 
@@ -113,7 +197,27 @@ export default function prerender(): Plugin {
             articleBody(a.slug),
             `${a.title} — ЛабГид`,
             a.excerpt.slice(0, 200),
-            `/articles/${a.slug}`
+            `/articles/${a.slug}`,
+            [
+              ORG,
+              breadcrumbs([
+                { name: 'Главная', path: '/' },
+                { name: 'Статьи', path: '/#articles' },
+                { name: a.title, path: `/articles/${a.slug}` },
+              ]),
+              {
+                '@type': 'Article',
+                headline: a.title,
+                description: a.excerpt.slice(0, 200),
+                inLanguage: 'ru-RU',
+                url: `${SITE}/articles/${a.slug}`,
+                mainEntityOfPage: `${SITE}/articles/${a.slug}`,
+                image: a.cover ? [a.cover] : [LOGO],
+                author: { '@type': 'Person', name: a.author },
+                publisher: { '@id': `${SITE}/#organization` },
+                dateModified: new Date().toISOString().slice(0, 10),
+              },
+            ]
           )
         )
       );
