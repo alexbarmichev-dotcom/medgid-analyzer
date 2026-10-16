@@ -3,6 +3,7 @@ import path from 'path';
 import type { Plugin } from 'vite';
 import { ARTICLES } from '../src/data/articles';
 import { FAQ_GROUPS } from '../src/data/faq';
+import { ABOUT_LEAD, ABOUT_SECTIONS } from '../src/data/about';
 
 const SITE = 'https://лаб-гид.рф';
 
@@ -44,7 +45,7 @@ const LD_BLOCK = /<script type="application\/ld\+json">[\s\S]*?<\/script>\s*/g;
 const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-const nav = `<header><a href="/">ЛабГид</a><nav><a href="/#how">Как это работает</a> <a href="/#pricing">Тарифы</a> <a href="/#articles">Статьи</a> <a href="/faq">Частые вопросы</a></nav></header>`;
+const nav = `<header><a href="/">ЛабГид</a><nav><a href="/#how">Как это работает</a> <a href="/#pricing">Тарифы</a> <a href="/#articles">Статьи</a> <a href="/about">О сервисе</a> <a href="/faq">Частые вопросы</a></nav></header>`;
 const footer = `<footer><p>ЛабГид — информационный сервис. Не ставит диагноз и не заменяет консультацию врача.</p></footer>`;
 
 const faqHtml = (withTitle: boolean) =>
@@ -77,6 +78,11 @@ ${faqHtml(true)}
 
 const faqBody = () =>
   `${nav}<main><h1>Частые вопросы о расшифровке анализов</h1>${faqHtml(false)}</main>${footer}`;
+
+const aboutBody = () =>
+  `${nav}<main><h1>О сервисе ЛабГид</h1><p>${esc(ABOUT_LEAD)}</p>${ABOUT_SECTIONS.map(
+    (x) => `<section><h2>${esc(x.title)}</h2>${x.paragraphs.map((p) => `<p>${esc(p)}</p>`).join('')}</section>`
+  ).join('')}</main>${footer}`;
 
 const articleBody = (slug: string) => {
   const a = ARTICLES.find((x) => x.slug === slug)!;
@@ -188,6 +194,33 @@ export default function prerender(): Plugin {
         )
       );
 
+      write(
+        outDir,
+        'about',
+        withMeta(
+          base,
+          aboutBody(),
+          'О сервисе ЛабГид — расшифровка анализов онлайн',
+          'ЛабГид — сервис расшифровки анализов простым языком: что умеет, для кого, сколько стоит, как защищены данные и чего сервис не делает.',
+          '/about',
+          [
+            ORG,
+            breadcrumbs([
+              { name: 'Главная', path: '/' },
+              { name: 'О сервисе', path: '/about' },
+            ]),
+            {
+              '@type': 'AboutPage',
+              name: 'О сервисе ЛабГид',
+              url: `${SITE}/about`,
+              inLanguage: 'ru-RU',
+              description: ABOUT_LEAD,
+              about: { '@id': `${SITE}/#organization` },
+            },
+          ]
+        )
+      );
+
       ARTICLES.forEach((a) =>
         write(
           outDir,
@@ -226,6 +259,7 @@ export default function prerender(): Plugin {
       const urls = [
         { loc: '/', freq: 'weekly', prio: '1.0' },
         { loc: '/faq', freq: 'monthly', prio: '0.8' },
+        { loc: '/about', freq: 'monthly', prio: '0.7' },
         ...ARTICLES.map((a) => ({ loc: `/articles/${a.slug}`, freq: 'monthly', prio: '0.6' })),
       ];
       const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls
