@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { ANALYZE_URL } from '@/components/site/start-flow/uploadClient';
 import Header from '@/components/site/Header';
 import Hero from '@/components/site/Hero';
+import Stats from '@/components/site/Stats';
 import Testimonial from '@/components/site/Testimonial';
 import HowItWorks from '@/components/site/HowItWorks';
 import Features from '@/components/site/Features';
@@ -43,6 +44,7 @@ const Index = () => {
       <Header />
       <main>
         <Hero />
+        <Stats />
         <Testimonial />
         <HowItWorks />
         <Features />
