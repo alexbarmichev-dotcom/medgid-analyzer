@@ -76,13 +76,11 @@ const write = (dir: string, rel: string, content: string) => {
 
 export default function prerender(): Plugin {
   let outDir = 'dist';
-  let root = process.cwd();
   return {
     name: 'static-prerender',
     apply: 'build',
     configResolved(cfg) {
       outDir = path.resolve(cfg.root, cfg.build.outDir);
-      root = cfg.root;
     },
     closeBundle() {
       const indexPath = path.join(outDir, 'index.html');
@@ -120,8 +118,19 @@ export default function prerender(): Plugin {
         )
       );
 
-      const sitemap = path.join(root, 'public', 'sitemap.xml');
-      if (fs.existsSync(sitemap)) fs.copyFileSync(sitemap, path.join(outDir, 'sitemap.xml'));
+      const today = new Date().toISOString().slice(0, 10);
+      const urls = [
+        { loc: '/', freq: 'weekly', prio: '1.0' },
+        { loc: '/faq', freq: 'monthly', prio: '0.8' },
+        ...ARTICLES.map((a) => ({ loc: `/articles/${a.slug}`, freq: 'monthly', prio: '0.6' })),
+      ];
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls
+        .map(
+          (u) =>
+            `  <url>\n    <loc>${SITE}${u.loc}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${u.freq}</changefreq>\n    <priority>${u.prio}</priority>\n  </url>`
+        )
+        .join('\n')}\n</urlset>\n`;
+      fs.writeFileSync(path.join(outDir, 'sitemap.xml'), xml);
     },
   };
 }
