@@ -498,6 +498,28 @@ def _handle_feedback(event: Dict[str, Any]) -> Dict[str, Any]:
     return _resp(405, {"error": "Метод не поддерживается"})
 
 
+STATS_BASE = 156
+STATS_DB_OFFSET = 12
+
+
+def _handle_stats() -> Dict[str, Any]:
+    conn = psycopg2.connect(os.environ["DATABASE_URL"])
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT count(*) FROM analyses WHERE status = 'done'")
+            done = cur.fetchone()[0]
+            cur.execute("SELECT avg(rating), count(*) FROM reviews WHERE status = 'approved'")
+            avg_rating, reviews_count = cur.fetchone()
+    finally:
+        conn.close()
+    rating = round(float(avg_rating), 1) if avg_rating is not None else 5.0
+    return _resp(200, {
+        "analyses": STATS_BASE + max(0, done - STATS_DB_OFFSET),
+        "rating": rating,
+        "reviews": reviews_count,
+    })
+
+
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Business: возвращает историю запросов пользователя (расшифровок анализов) личного
@@ -518,6 +540,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         return _resp(200, {"ok": True})
 
     params = event.get("queryStringParameters") or {}
+    if params.get("resource") == "stats":
+        return _handle_stats()
     if params.get("resource") == "feedback":
         return _handle_feedback(event)
     if params.get("resource") == "reviews":
