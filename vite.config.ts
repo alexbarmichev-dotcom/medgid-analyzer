@@ -2,6 +2,7 @@ import {defineConfig} from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import {componentTagger} from "pp-tagger";
+import prerender from "./vite-plugins/prerender";
 
 // HMR-сокет превью рвёт инфраструктура: ingress-nginx на каждом reload
 // конфига (захват/освобождение любого dev-пода) через 30 с закрывает все
@@ -105,6 +106,7 @@ export default defineConfig(({mode}) => ({
     plugins: [
         react(),
         hmrKeepalive,
+        prerender(),
         mode === 'development' &&
         componentTagger(),
     ].filter(Boolean),
