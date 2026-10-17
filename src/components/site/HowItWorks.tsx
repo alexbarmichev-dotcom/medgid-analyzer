@@ -1,4 +1,5 @@
 import Icon from '@/components/ui/icon';
+import { emitStartIntent } from '@/lib/startFlowBus';
 
 const STEPS = [
   {
@@ -48,6 +49,20 @@ const HowItWorks = () => {
               <p className="mt-3 text-[0.95rem] leading-relaxed text-ink-soft">{s.text}</p>
             </div>
           ))}
+        </div>
+
+        <div className="mt-10 flex flex-col items-center gap-3 text-center">
+          <button
+            onClick={() => {
+              emitStartIntent('anonymous');
+              document.querySelector('#start')?.scrollIntoView({ behavior: 'smooth' });
+            }}
+            className="inline-flex items-center gap-2.5 rounded-[var(--radius)] bg-accent px-7 py-4 text-base font-semibold text-accent-foreground transition-transform hover:-translate-y-0.5"
+          >
+            Попробовать на своём анализе — 150&nbsp;₽
+            <Icon name="ArrowRight" size={18} />
+          </button>
+          <p className="text-sm text-muted-foreground">Без регистрации. Оплата через ЮKassa.</p>
         </div>
       </div>
     </section>

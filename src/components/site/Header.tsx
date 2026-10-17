@@ -3,13 +3,13 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import Logo from './Logo';
 import InstallAppButton from './InstallAppButton';
+import { emitStartIntent } from '@/lib/startFlowBus';
 
 const NAV = [
   { label: 'Как это работает', href: '#how' },
   { label: 'Что вы получаете', href: '#features' },
   { label: 'Отзывы', href: '#reviews' },
   { label: 'Статьи', href: '#articles' },
-  { label: 'Защита данных', href: '#security' },
   { label: 'Стоимость', href: '#pricing' },
   { label: 'Вопросы', href: '#feedback' },
   { label: 'FAQ', href: '/faq' },
@@ -45,6 +45,16 @@ const Header = () => {
     el?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const startFree = () => {
+    setOpen(false);
+    if (location.pathname !== '/') {
+      navigate('/#try');
+      return;
+    }
+    emitStartIntent('anonymous');
+    document.querySelector('#start')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <header
       className={`sticky top-0 z-50 transition-colors ${
@@ -56,22 +66,22 @@ const Header = () => {
           <Logo />
         </button>
 
-        <nav className="hidden items-center gap-8 lg:flex">
+        <nav className="hidden items-center gap-5 pl-6 xl:gap-7 lg:flex">
           {NAV.map((n) => (
             <button
               key={n.href}
               onClick={() => go(n.href)}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="whitespace-nowrap text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               {n.label}
             </button>
           ))}
           <InstallAppButton className="inline-flex items-center gap-2 rounded-[var(--radius)] border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted" />
           <button
-            onClick={() => go('#start')}
-            className="inline-flex items-center gap-2 rounded-[var(--radius)] bg-hand px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:-translate-y-0.5"
+            onClick={startFree}
+            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-[var(--radius)] bg-hand px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:-translate-y-0.5"
           >
-            Личный кабинет
+            Расшифровать анализ
             <Icon name="ArrowRight" size={16} />
           </button>
         </nav>
@@ -102,11 +112,20 @@ const Header = () => {
               className="mt-2 inline-flex items-center justify-center gap-2 rounded-[var(--radius)] border border-border px-5 py-3 text-base font-semibold text-foreground"
             />
             <button
-              onClick={() => go('#start')}
+              onClick={startFree}
               className="mt-2 inline-flex items-center justify-center gap-2 rounded-[var(--radius)] bg-accent px-5 py-3 text-base font-semibold text-accent-foreground"
             >
-              Личный кабинет
+              Расшифровать анализ — 150 ₽
               <Icon name="ArrowRight" size={18} />
+            </button>
+            <button
+              onClick={() => {
+                if (location.pathname === '/') emitStartIntent('subscribe');
+                go('#start');
+              }}
+              className="mt-1 px-3 py-3 text-center text-base font-medium text-muted-foreground"
+            >
+              Личный кабинет
             </button>
           </nav>
         </div>

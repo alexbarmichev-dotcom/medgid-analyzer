@@ -1,7 +1,13 @@
 import Icon from '@/components/ui/icon';
+import { emitStartIntent } from '@/lib/startFlowBus';
 
 const scrollTo = (href: string) =>
   document.querySelector(href)?.scrollIntoView({ behavior: 'smooth' });
+
+const startFree = () => {
+  emitStartIntent('anonymous');
+  scrollTo('#start');
+};
 
 const Hero = () => {
   return (
@@ -17,39 +23,47 @@ const Hero = () => {
         }}
       />
 
-      <div className="relative z-10 mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] items-center gap-12 px-5 py-14 md:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:py-20">
+      <div className="relative z-10 mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] items-center gap-12 px-5 py-14 md:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start lg:py-10">
         {/* left column */}
-        <div className="animate-fade-in">
+        <div className="animate-fade-in lg:pt-6">
           <span className="mb-5 inline-flex items-center gap-2.5 text-xs sm:text-sm font-semibold uppercase tracking-wide text-accent">
             <span className="h-[7px] w-[7px] rounded-full bg-accent" />
             Расшифровка анализов на понятном языке
           </span>
 
-          <h1 className="font-head text-[2.1rem] font-extrabold leading-[1.05] tracking-[-0.035em] sm:text-[3.4rem] lg:text-[3.2rem] xl:text-[3.7rem]">
-            <span className="block w-full text-center font-normal text-muted-foreground">Пришли результаты анализов из лаборатории</span>
-            <br />
-            <span className="block w-full text-center">
+          <h1 className="font-head text-[1.9rem] font-extrabold leading-[1.08] tracking-[-0.035em] sm:text-[2.6rem] lg:text-[2.5rem] xl:text-[2.9rem]">
+            <span className="block w-full text-center text-[0.62em] font-normal text-muted-foreground">Пришли результаты анализов из лаборатории</span>
+            <span className="mt-3 block w-full text-center">
               И&nbsp;что мне с&nbsp;этим{' '}
               <span className="hand-underline text-accent">делать?</span>
             </span>
           </h1>
 
-          <p className="mt-6 max-w-[30ch] text-lg leading-relaxed text-ink-soft sm:text-xl">
+          <p className="mt-5 max-w-[46ch] text-base leading-relaxed text-ink-soft sm:text-lg">
             ЛабГид — сервис расшифровки анализов онлайн: разбирает каждый показатель отдельно, что
             означает, почему отклонился и&nbsp;о&nbsp;чём спросить врача на&nbsp;приёме.
           </p>
 
-          <div className="mt-8 flex flex-wrap items-center gap-6">
+          <div className="mt-8 flex flex-col items-start gap-4">
             <button
-              onClick={() => scrollTo('#start')}
+              onClick={startFree}
               className="inline-flex items-center gap-2.5 rounded-[var(--radius)] bg-accent px-7 py-4 text-base font-semibold text-accent-foreground shadow-lg shadow-accent/20 transition-transform hover:-translate-y-0.5"
             >
-              Войти в личный кабинет
+              Расшифровать анализ — 150&nbsp;₽
               <Icon name="ArrowRight" size={18} />
             </button>
-            <p className="max-w-[16ch] text-sm leading-snug text-muted-foreground">
-              Кабинет&nbsp;— по подписке. Разовый разбор&nbsp;— 150&nbsp;₽ в тарифах
+            <p className="text-sm leading-snug text-muted-foreground">
+              Без регистрации и подписки. Результат за&nbsp;30–60&nbsp;секунд.
             </p>
+            <button
+              onClick={() => {
+                emitStartIntent('subscribe');
+                scrollTo('#start');
+              }}
+              className="text-sm font-semibold text-accent hover:underline"
+            >
+              Уже есть подписка? Войти в личный кабинет
+            </button>
           </div>
         </div>
 

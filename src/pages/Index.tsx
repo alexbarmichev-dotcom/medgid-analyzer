@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { emitStartIntent } from '@/lib/startFlowBus';
 import { ANALYZE_URL } from '@/components/site/start-flow/uploadClient';
 import Header from '@/components/site/Header';
 import Hero from '@/components/site/Hero';
@@ -34,6 +35,11 @@ const Index = () => {
   useEffect(() => {
     if (!hash) return;
     const timer = setTimeout(() => {
+      if (hash === '#try') {
+        emitStartIntent('anonymous');
+        document.querySelector('#start')?.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
       document.querySelector(hash)?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
     return () => clearTimeout(timer);

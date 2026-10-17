@@ -22,7 +22,7 @@ const NotFound = () => {
           получите понятный разбор за 30–60 секунд.
         </p>
         <Link
-          to="/#start"
+          to="/#try"
           className="mt-8 inline-flex items-center gap-2 rounded-[var(--radius)] bg-hand px-6 py-3.5 text-base font-semibold text-accent-foreground transition-transform hover:-translate-y-0.5"
         >
           Расшифровать анализ

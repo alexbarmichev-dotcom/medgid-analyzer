@@ -94,7 +94,7 @@ const articleBody = (slug: string) => {
           ? `<h2>${esc(p.slice(3))}</h2>`
           : `<p>${esc(p)}</p>`
     )
-    .join('')}<p><a href="/#start">Расшифровать свой анализ — 150 ₽</a></p></article></main>${footer}`;
+    .join('')}<p><a href="/#try">Расшифровать свой анализ — 150 ₽</a></p></article></main>${footer}`;
 };
 
 const withMeta = (
