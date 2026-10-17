@@ -4,6 +4,7 @@ import Icon from '@/components/ui/icon';
 import Header from '@/components/site/Header';
 import Footer from '@/components/site/Footer';
 import { ARTICLES } from '@/data/articles';
+import { useNoindex } from '@/hooks/useNoindex';
 
 const URL_RE = /(https?:\/\/[^\s,]+)/g;
 
@@ -24,9 +25,28 @@ const renderWithLinks = (text: string) =>
     ),
   );
 
+const renderParagraph = (p: string, i: number) => {
+  if (p.startsWith('### ')) {
+    return (
+      <h3 key={i} className="pt-2 font-head text-lg font-bold text-foreground">
+        {p.slice(4)}
+      </h3>
+    );
+  }
+  if (p.startsWith('## ')) {
+    return (
+      <h2 key={i} className="pt-4 font-head text-2xl font-extrabold leading-tight text-foreground">
+        {p.slice(3)}
+      </h2>
+    );
+  }
+  return <p key={i}>{renderWithLinks(p)}</p>;
+};
+
 const Article = () => {
   const { slug } = useParams();
   const article = ARTICLES.find((a) => a.slug === slug);
+  useNoindex(!article);
   const related = ARTICLES.filter((a) => a.slug !== slug).slice(0, 4);
 
   useEffect(() => {
@@ -87,27 +107,28 @@ const Article = () => {
 
           <div className="mt-8 space-y-5 text-[1.05rem] leading-relaxed text-ink-soft">
             {article.paragraphs.map((p, i) => {
-              if (p.startsWith('### ')) {
+              if (i === Math.floor(article.paragraphs.length / 2)) {
                 return (
-                  <h3 key={i} className="pt-2 font-head text-lg font-bold text-foreground">
-                    {p.slice(4)}
-                  </h3>
+                  <div key={i} className="space-y-5">
+                    <aside className="flex flex-col items-start gap-4 rounded-3xl border border-accent/25 bg-card p-6 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-[0.95rem] leading-snug text-foreground">
+                        <strong>Есть бланк анализа на руках?</strong> Загрузите фото — разбор и вопросы для врача за 30–60 секунд, 150 ₽.
+                      </p>
+                      <Link
+                        to="/#start"
+                        className="inline-flex shrink-0 items-center gap-2 rounded-[var(--radius)] bg-hand px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:-translate-y-0.5"
+                      >
+                        Расшифровать анализ
+                        <Icon name="ArrowRight" size={16} />
+                      </Link>
+                    </aside>
+                    {renderParagraph(p, i)}
+                  </div>
                 );
               }
-              if (p.startsWith('## ')) {
-                return (
-                  <h2
-                    key={i}
-                    className="pt-4 font-head text-2xl font-extrabold leading-tight text-foreground"
-                  >
-                    {p.slice(3)}
-                  </h2>
-                );
-              }
-              return <p key={i}>{renderWithLinks(p)}</p>;
+              return renderParagraph(p, i);
             })}
           </div>
-
           <p className="mt-10 font-caveat text-2xl text-hand">{article.author}</p>
 
           <div className="mt-12 rounded-3xl border-2 border-accent/25 bg-card p-7 text-center md:p-10">

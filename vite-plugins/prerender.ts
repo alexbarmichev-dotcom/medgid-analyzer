@@ -87,8 +87,14 @@ const aboutBody = () =>
 const articleBody = (slug: string) => {
   const a = ARTICLES.find((x) => x.slug === slug)!;
   return `${nav}<main><article><h1>${esc(a.title)}</h1><p>Автор: ${esc(a.author)}</p>${a.paragraphs
-    .map((p) => `<p>${esc(p)}</p>`)
-    .join('')}</article></main>${footer}`;
+    .map((p) =>
+      p.startsWith('### ')
+        ? `<h3>${esc(p.slice(4))}</h3>`
+        : p.startsWith('## ')
+          ? `<h2>${esc(p.slice(3))}</h2>`
+          : `<p>${esc(p)}</p>`
+    )
+    .join('')}<p><a href="/#start">Расшифровать свой анализ — 150 ₽</a></p></article></main>${footer}`;
 };
 
 const withMeta = (
