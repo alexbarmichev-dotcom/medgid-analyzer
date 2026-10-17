@@ -228,8 +228,8 @@ export default function prerender(): Plugin {
           withMeta(
             base,
             articleBody(a.slug),
-            `${a.title} — ЛабГид`,
-            a.excerpt.slice(0, 200),
+            `${a.seoTitle ?? a.title} — ЛабГид`,
+            a.seoDescription ?? a.excerpt.slice(0, 160),
             `/articles/${a.slug}`,
             [
               ORG,
@@ -241,7 +241,7 @@ export default function prerender(): Plugin {
               {
                 '@type': 'Article',
                 headline: a.title,
-                description: a.excerpt.slice(0, 200),
+                description: a.seoDescription ?? a.excerpt.slice(0, 160),
                 inLanguage: 'ru-RU',
                 url: `${SITE}/articles/${a.slug}`,
                 mainEntityOfPage: `${SITE}/articles/${a.slug}`,
