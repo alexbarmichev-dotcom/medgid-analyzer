@@ -88,7 +88,7 @@ const Article = () => {
           <nav aria-label="Хлебные крошки" className="mb-6 text-sm text-muted-foreground">
             <Link to="/" className="hover:text-accent">Главная</Link>
             <span className="mx-2">/</span>
-            <Link to="/#articles" className="hover:text-accent">Статьи</Link>
+            <Link to="/blog" className="hover:text-accent">Статьи</Link>
             <span className="mx-2">/</span>
             <span className="text-foreground">{article.title}</span>
           </nav>

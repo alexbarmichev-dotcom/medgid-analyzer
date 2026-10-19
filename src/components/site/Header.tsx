@@ -9,7 +9,7 @@ const NAV = [
   { label: 'Как это работает', href: '#how' },
   { label: 'Что вы получаете', href: '#features' },
   { label: 'Отзывы', href: '#reviews' },
-  { label: 'Статьи', href: '#articles' },
+  { label: 'Статьи', href: '/blog' },
   { label: 'Стоимость', href: '#pricing' },
   { label: 'Вопросы', href: '#feedback' },
   { label: 'FAQ', href: '/faq' },

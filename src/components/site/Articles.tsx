@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import { ARTICLES } from '@/data/articles';
+import ArticleCard from '@/components/site/ArticleCard';
 
 const Articles = () => {
   return (
@@ -12,49 +13,33 @@ const Articles = () => {
             Статьи
           </span>
           <h2 className="font-head text-3xl font-extrabold tracking-[-0.03em] sm:text-4xl">
-            Читайте о{' '}
-            <span className="hand-underline text-accent">здоровье и анализах</span>
+            <Link to="/blog" className="group inline-flex flex-wrap items-center gap-x-3">
+              <span>
+                Читайте о <span className="hand-underline text-accent">здоровье и анализах</span>
+              </span>
+              <Icon
+                name="ArrowRight"
+                size={28}
+                className="text-accent transition-transform group-hover:translate-x-1"
+              />
+            </Link>
           </h2>
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {ARTICLES.map((a) => (
-            <Link
-              key={a.slug}
-              to={`/articles/${a.slug}`}
-              className="group flex flex-col overflow-hidden rounded-3xl border border-border bg-background transition-transform hover:-translate-y-1"
-            >
-              {a.cover ? (
-                <div className="aspect-[16/9] overflow-hidden">
-                  <img
-                    src={a.cover}
-                    alt={a.title}
-                    loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
-              ) : null}
-              <div className="flex flex-1 flex-col p-7">
-              {!a.cover && (
-                <span className="mb-5 grid h-12 w-12 place-items-center rounded-2xl bg-hand/10 text-hand">
-                  <Icon name="BookOpen" size={24} />
-                </span>
-              )}
-              <h3 className="font-head text-lg font-bold leading-snug">{a.title}</h3>
-              <p className="mt-3 line-clamp-4 text-[0.95rem] leading-relaxed text-ink-soft">
-                {a.excerpt}
-              </p>
-              <span className="mt-auto inline-flex items-center gap-2 pt-5 text-sm font-semibold text-accent">
-                Читать статью
-                <Icon
-                  name="ArrowRight"
-                  size={16}
-                  className="transition-transform group-hover:translate-x-1"
-                />
-              </span>
-              </div>
-            </Link>
+          {ARTICLES.slice(0, 3).map((a) => (
+            <ArticleCard key={a.slug} article={a} />
           ))}
+        </div>
+
+        <div className="mt-10 text-center">
+          <Link
+            to="/blog"
+            className="inline-flex items-center gap-2 rounded-[var(--radius)] border border-border bg-background px-6 py-3.5 text-sm font-semibold text-foreground transition-transform hover:-translate-y-0.5"
+          >
+            Все статьи
+            <Icon name="ArrowRight" size={16} />
+          </Link>
         </div>
       </div>
     </section>

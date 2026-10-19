@@ -45,7 +45,7 @@ const LD_BLOCK = /<script type="application\/ld\+json">[\s\S]*?<\/script>\s*/g;
 const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-const nav = `<header><a href="/">ЛабГид</a><nav><a href="/#how">Как это работает</a> <a href="/#pricing">Тарифы</a> <a href="/#articles">Статьи</a> <a href="/about">О сервисе</a> <a href="/faq">Частые вопросы</a></nav></header>`;
+const nav = `<header><a href="/">ЛабГид</a><nav><a href="/#how">Как это работает</a> <a href="/#pricing">Тарифы</a> <a href="/blog">Статьи</a> <a href="/about">О сервисе</a> <a href="/faq">Частые вопросы</a></nav></header>`;
 const footer = `<footer><p>ЛабГид — информационный сервис. Не ставит диагноз и не заменяет консультацию врача.</p></footer>`;
 
 const faqHtml = (withTitle: boolean) =>
@@ -75,6 +75,11 @@ const homeBody = () =>
 ${faqHtml(true)}
 <p><a href="/faq">Все ответы на вопросы</a></p>
 </main>${footer}`;
+
+const blogBody = () =>
+  `${nav}<main><h1>Блог о здоровье и анализах</h1><ul>${ARTICLES.map(
+    (a) => `<li><a href="/articles/${a.slug}"><h2>${esc(a.title)}</h2></a><p>${esc(a.excerpt)}</p></li>`
+  ).join('')}</ul></main>${footer}`;
 
 const faqBody = () =>
   `${nav}<main><h1>Частые вопросы о расшифровке анализов</h1>${faqHtml(false)}</main>${footer}`;
@@ -202,6 +207,25 @@ export default function prerender(): Plugin {
 
       write(
         outDir,
+        'blog',
+        withMeta(
+          base,
+          blogBody(),
+          'Блог о здоровье и анализах — ЛабГид',
+          'Статьи о здоровье, лабораторных анализах и разговоре с врачом: простым языком о том, как понимать свои результаты.',
+          '/blog',
+          [
+            ORG,
+            breadcrumbs([
+              { name: 'Главная', path: '/' },
+              { name: 'Блог', path: '/blog' },
+            ]),
+          ]
+        )
+      );
+
+      write(
+        outDir,
         'about',
         withMeta(
           base,
@@ -241,7 +265,7 @@ export default function prerender(): Plugin {
               ORG,
               breadcrumbs([
                 { name: 'Главная', path: '/' },
-                { name: 'Статьи', path: '/#articles' },
+                { name: 'Статьи', path: '/blog' },
                 { name: a.title, path: `/articles/${a.slug}` },
               ]),
               {
@@ -266,6 +290,7 @@ export default function prerender(): Plugin {
         { loc: '/', freq: 'weekly', prio: '1.0' },
         { loc: '/faq', freq: 'monthly', prio: '0.8' },
         { loc: '/about', freq: 'monthly', prio: '0.7' },
+        { loc: '/blog', freq: 'weekly', prio: '0.8' },
         ...ARTICLES.map((a) => ({ loc: `/articles/${a.slug}`, freq: 'monthly', prio: '0.6' })),
       ];
       const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls

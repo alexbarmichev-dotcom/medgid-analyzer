@@ -360,6 +360,34 @@ def _client_ip(event: Dict[str, Any]) -> str:
     return str(identity.get("sourceIp") or "unknown")[:64]
 
 
+def _notify_admin_lock(ip: str) -> None:
+    login = os.environ.get("MAILRU_SMTP_LOGIN")
+    password = os.environ.get("MAILRU_SMTP_PASSWORD")
+    if not login or not password:
+        return
+    try:
+        import smtplib
+        from email.header import Header
+        from email.mime.text import MIMEText
+        body = (
+            "<div style='font-family:Arial,sans-serif;font-size:15px;line-height:1.6'>"
+            "<h3>Кто-то подбирает пароль администратора ЛабГид</h3>"
+            "<p>5 неверных попыток подряд. Вход с этого адреса заблокирован на "
+            + str(ADMIN_LOCK_MINUTES) + " минут.</p>"
+            "<p>Адрес: <b>" + ip + "</b></p>"
+            "<p>Если это были вы, ничего делать не нужно. Если нет, рекомендуем сменить пароль ADMIN_PASSWORD.</p></div>"
+        )
+        msg = MIMEText(body, "html", "utf-8")
+        msg["Subject"] = Header("ЛабГид: заблокирован подбор пароля администратора", "utf-8")
+        msg["From"] = login
+        msg["To"] = login
+        with smtplib.SMTP_SSL("smtp.mail.ru", 465, timeout=3) as server:
+            server.login(login, password)
+            server.sendmail(login, [login], msg.as_string())
+    except Exception as e:
+        print("admin lock notify failed: " + str(e))
+
+
 def _check_admin_auth(event: Dict[str, Any]) -> bool:
     headers = event.get("headers") or {}
     provided = headers.get("X-Admin-Password") or headers.get("x-admin-password") or ""
@@ -396,6 +424,7 @@ def _check_admin_auth(event: Dict[str, Any]) -> bool:
                         + str(ADMIN_LOCK_MINUTES) + " minutes' WHERE ip = '" + ip + "'"
                     )
                     conn.commit()
+                    _notify_admin_lock(ip)
                     raise AdminLocked(ADMIN_LOCK_MINUTES * 60)
                 conn.commit()
             return False

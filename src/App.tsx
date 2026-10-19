@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Faq from "./pages/Faq";
 import About from "./pages/About";
 import Article from "./pages/Article";
+import Blog from "./pages/Blog";
 import AdminHome from "./pages/AdminHome";
 import AdminFeedback from "./pages/AdminFeedback";
 import AdminPayments from "./pages/AdminPayments";
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/faq" element={<Faq />} />
           <Route path="/about" element={<About />} />
+          <Route path="/blog" element={<Blog />} />
           <Route path="/articles/:slug" element={<Article />} />
           <Route path="/admin" element={<AdminHome />} />
           <Route path="/admin/feedback" element={<AdminFeedback />} />

@@ -51,6 +51,9 @@ const Footer = () => {
             <Link to="/about" className="transition-colors hover:text-accent">
               О сервисе
             </Link>
+            <Link to="/blog" className="transition-colors hover:text-accent">
+              Блог
+            </Link>
             <Link to="/faq" className="transition-colors hover:text-accent">
               Частые вопросы
             </Link>
