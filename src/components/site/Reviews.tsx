@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -113,6 +113,7 @@ const Reviews = () => {
   const [text, setText] = useState('');
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [sending, setSending] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -134,7 +135,22 @@ const Reviews = () => {
         /* используем FALLBACK_REVIEWS */
       }
     };
-    load();
+    const node = sectionRef.current;
+    if (!node || typeof IntersectionObserver === 'undefined') {
+      load();
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          observer.disconnect();
+          load();
+        }
+      },
+      { rootMargin: '800px 0px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
   }, []);
 
   const averageRating = (
@@ -213,7 +229,7 @@ const Reviews = () => {
   };
 
   return (
-    <section id="reviews" className="relative scroll-mt-20 bg-card">
+    <section id="reviews" ref={sectionRef} className="relative scroll-mt-20 bg-card">
       <div className="mx-auto max-w-7xl px-5 py-20 md:px-8">
         <div className="mb-12 flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
           <div className="max-w-xl">
