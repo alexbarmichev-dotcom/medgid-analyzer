@@ -75,7 +75,11 @@ const Hero = () => {
 
           <div className="relative overflow-hidden rotate-[1.4deg] animate-floaty rounded-[22px] shadow-[0_26px_50px_-30px_rgba(28,27,24,0.5)]">
             <img
-              src="https://cdn.poehali.dev/projects/a50bf440-39eb-48cd-8c9b-26529e75ba50/bucket/26028d96-5831-4ee2-bdc2-1ed20587a685.jpeg"
+              src="/hero-lab.webp"
+              width={800}
+              height={1275}
+              fetchPriority="high"
+              decoding="async"
               alt="Бланк анализа крови с рукописными результатами"
               className="block w-full h-auto select-none opacity-40"
               draggable={false}

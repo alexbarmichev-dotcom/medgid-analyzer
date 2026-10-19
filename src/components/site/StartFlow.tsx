@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import HistoryDialog from '@/components/site/start-flow/HistoryDialog';
+import { lazy, Suspense, useState } from 'react';
 import StartFlowPanel from '@/components/site/start-flow/StartFlowPanel';
-import ChatDialog from '@/components/site/start-flow/ChatDialog';
-import IndicatorsDialog from '@/components/site/start-flow/IndicatorsDialog';
 import { useStartFlow } from '@/components/site/start-flow/useStartFlow';
+
+const HistoryDialog = lazy(() => import('@/components/site/start-flow/HistoryDialog'));
+const ChatDialog = lazy(() => import('@/components/site/start-flow/ChatDialog'));
+const IndicatorsDialog = lazy(() => import('@/components/site/start-flow/IndicatorsDialog'));
 
 const StartFlow = () => {
   const [chatOpen, setChatOpen] = useState(false);
@@ -160,6 +161,8 @@ const StartFlow = () => {
         />
       </div>
 
+      <Suspense fallback={null}>
+      {historyOpen && (
       <HistoryDialog
         open={historyOpen}
         onOpenChange={setHistoryOpen}
@@ -171,9 +174,11 @@ const StartFlow = () => {
         onCheckPayment={checkIncompletePayment}
         onDismiss={dismissIncomplete}
       />
+      )}
 
-      <ChatDialog open={chatOpen} onOpenChange={setChatOpen} />
-      <IndicatorsDialog open={indicatorsOpen} onOpenChange={setIndicatorsOpen} />
+      {chatOpen && <ChatDialog open={chatOpen} onOpenChange={setChatOpen} />}
+      {indicatorsOpen && <IndicatorsDialog open={indicatorsOpen} onOpenChange={setIndicatorsOpen} />}
+      </Suspense>
     </section>
   );
 };

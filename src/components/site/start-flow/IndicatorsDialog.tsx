@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { ChartBlock, ChartData, ChartPoint, parseChart } from '@/components/site/AnalysisMarkdown';
 import { getStoredLogin, getStoredToken } from '@/lib/authStorage';
-import { downloadIndicatorsPdf } from '@/lib/pdf';
 import {
   Dialog,
   DialogContent,
@@ -113,6 +112,7 @@ const IndicatorsDialog = ({ open, onOpenChange }: IndicatorsDialogProps) => {
         .sort((a, b) => toTime(b.date || '') - toTime(a.date || ''))
         .find((i) => i.gender || i.age);
       const rawLogin = getStoredLogin() || '';
+      const { downloadIndicatorsPdf } = await import('@/lib/pdf');
       await downloadIndicatorsPdf(visible, {
         login: fullName || (rawLogin.startsWith('acct:') ? rawLogin.slice(5) : rawLogin),
         gender: latest?.gender,

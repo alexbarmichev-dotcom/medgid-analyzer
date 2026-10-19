@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import Icon from '@/components/ui/icon';
 import AnalysisMarkdown from '@/components/site/AnalysisMarkdown';
-import { downloadAnalysisPdf } from '@/lib/pdf';
 import CompareDialog from '@/components/site/start-flow/CompareDialog';
 import IncompleteOrders, { IncompleteOrder } from '@/components/site/start-flow/IncompleteOrders';
 import {
@@ -81,6 +80,7 @@ const HistoryDialog = ({
     if (!item.result) return;
     setDownloadingId(item.id);
     try {
+      const { downloadAnalysisPdf } = await import('@/lib/pdf');
       await downloadAnalysisPdf(item.result, {
         date: formatDate(item.date),
         gender: item.gender,

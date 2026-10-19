@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { getStoredLogin, isGuestLogin } from '@/lib/authStorage';
 import Icon from '@/components/ui/icon';
-import AnalysisMarkdown from '@/components/site/AnalysisMarkdown';
-import { downloadAnalysisPdf } from '@/lib/pdf';
+
+const AnalysisMarkdown = lazy(() => import('@/components/site/AnalysisMarkdown'));
 
 interface PayStepProps {
   analyzing: boolean;
@@ -76,6 +76,7 @@ export const DoneStep = ({ aiResult, reset, openHistory, openChat }: DoneStepPro
   const handleDownload = async () => {
     setDownloading(true);
     try {
+      const { downloadAnalysisPdf } = await import('@/lib/pdf');
       await downloadAnalysisPdf(aiResult, { date: new Date().toLocaleString('ru-RU') });
     } finally {
       setDownloading(false);
@@ -91,7 +92,9 @@ export const DoneStep = ({ aiResult, reset, openHistory, openChat }: DoneStepPro
         <h3 className="font-head text-xl font-bold">Расшифровка готова</h3>
         {aiResult ? (
           <div className="rounded-2xl border border-border bg-background p-6 text-left text-lg leading-relaxed text-ink-soft">
-            <AnalysisMarkdown text={aiResult} />
+            <Suspense fallback={<p className="text-base text-muted-foreground">Готовим текст…</p>}>
+              <AnalysisMarkdown text={aiResult} />
+            </Suspense>
           </div>
         ) : (
           <p className="text-ink-soft">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -11,8 +11,8 @@ import {
   takePendingPayment,
 } from '@/lib/authStorage';
 import { emitStartIntent } from '@/lib/startFlowBus';
-import IndicatorsDialog from '@/components/site/start-flow/IndicatorsDialog';
-import ChatDialog from '@/components/site/start-flow/ChatDialog';
+const IndicatorsDialog = lazy(() => import('@/components/site/start-flow/IndicatorsDialog'));
+const ChatDialog = lazy(() => import('@/components/site/start-flow/ChatDialog'));
 
 const TARIFFS_URL = 'https://functions.poehali.dev/d75f0411-629b-4a8f-9a09-f4ffbcdcec4f';
 const PENDING_SUB_KEY = 'medgid_pending_subscription';
@@ -416,8 +416,10 @@ const Pricing = () => {
         )}
       </div>
 
-      <ChatDialog open={chatOpen} onOpenChange={setChatOpen} />
-      <IndicatorsDialog open={indicatorsOpen} onOpenChange={setIndicatorsOpen} />
+      <Suspense fallback={null}>
+        {chatOpen && <ChatDialog open={chatOpen} onOpenChange={setChatOpen} />}
+        {indicatorsOpen && <IndicatorsDialog open={indicatorsOpen} onOpenChange={setIndicatorsOpen} />}
+      </Suspense>
     </section>
   );
 };
