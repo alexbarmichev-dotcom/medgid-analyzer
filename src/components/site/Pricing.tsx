@@ -55,22 +55,56 @@ const formatPrice = (price: string, durationDays: number | null) => {
   return `${num.toLocaleString('ru-RU')} ₽ ${period}`;
 };
 
+const FALLBACK_TARIFFS: Tariff[] = [
+  {
+    id: 'one_time',
+    name: 'Разовая оплата',
+    description: '1 полный разбор анализов в личном кабинете, простым языком',
+    price: '150.00',
+    durationDays: null,
+    features: ['1 полный разбор анализов', 'Простым языком, без диагнозов', 'Список вопросов для врача'],
+    chatQuestionLimit: null,
+  },
+  {
+    id: 'sub_12m',
+    name: 'Подписка. 12 месяцев',
+    description:
+      'Расшифровка анализов + медицинский дневник + графики динамики + тренды + экспорт в PDF + личный защищённый AI-чат',
+    price: '2990.00',
+    durationDays: 365,
+    features: [
+      'Расшифровка анализов',
+      'Медицинский дневник',
+      'Графики динамики показателей',
+      'Тренды по анализам',
+      'Экспорт в PDF',
+      'Сравнительный ИИ-разбор анализов',
+      'Личный защищённый AI-чат',
+    ],
+    chatQuestionLimit: 15,
+  },
+];
+
 const Pricing = () => {
-  const [tariffs, setTariffs] = useState<Tariff[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [tariffs, setTariffs] = useState<Tariff[]>(FALLBACK_TARIFFS);
+  const [loading, setLoading] = useState(false);
   const [myTariff, setMyTariff] = useState<MyTariff | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
   const [rechecking, setRechecking] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [indicatorsOpen, setIndicatorsOpen] = useState(false);
 
-  const loadTariffs = async () => {
+  const loadTariffs = async (retry = true) => {
     try {
       const res = await fetch(`${TARIFFS_URL}?resource=list`);
       const data = await res.json();
-      if (res.ok) setTariffs(data.items || []);
+      if (res.ok && Array.isArray(data.items) && data.items.length > 0) {
+        setTariffs(data.items);
+        return;
+      }
+      throw new Error('empty');
     } catch {
-      /* тихо игнорируем */
+      if (retry) setTimeout(() => loadTariffs(false), 2500);
     } finally {
       setLoading(false);
     }
