@@ -108,7 +108,8 @@ const withMeta = (
   title: string,
   description: string,
   urlPath: string,
-  ld?: object[]
+  ld?: object[],
+  image?: string
 ) => {
   const url = `${SITE}${urlPath}`;
   let out = html.replace('<div id="root"></div>', `<div id="root">${body}</div>`);
@@ -124,6 +125,10 @@ const withMeta = (
     /(<meta property="og:description" content=")[\s\S]*?(")/,
     `$1${esc(description)}$2`
   );
+  if (image) {
+    out = out.replace(/(<meta property="og:image" content=")[^"]*(")/, `$1${image}$2`);
+    out = out.replace(/(<meta name="twitter:image" content=")[^"]*(")/, `$1${image}$2`);
+  }
   if (ld) {
     out = out.replace(LD_BLOCK, '');
     out = out.replace('</head>', `${ldScripts(ld)}\n</head>`);
@@ -280,7 +285,8 @@ export default function prerender(): Plugin {
                 publisher: { '@id': `${SITE}/#organization` },
                 dateModified: new Date().toISOString().slice(0, 10),
               },
-            ]
+            ],
+            a.cover
           )
         )
       );
