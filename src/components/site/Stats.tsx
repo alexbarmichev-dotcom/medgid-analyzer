@@ -14,14 +14,30 @@ const Stats = () => {
   const [data, setData] = useState<StatsData>(FALLBACK);
 
   useEffect(() => {
-    fetch(`${HISTORY_URL}?resource=stats`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (d && typeof d.analyses === 'number') {
-          setData({ analyses: d.analyses, rating: Number(d.rating) || 5 });
-        }
-      })
-      .catch(() => undefined);
+    let cancelled = false;
+    const load = () => {
+      if (cancelled) return;
+      fetch(`${HISTORY_URL}?resource=stats`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (!cancelled && d && typeof d.analyses === 'number') {
+            setData({ analyses: d.analyses, rating: Number(d.rating) || 5 });
+          }
+        })
+        .catch(() => undefined);
+    };
+    const schedule = () => {
+      const ric = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number })
+        .requestIdleCallback;
+      if (ric) ric(load, { timeout: 3000 });
+      else setTimeout(load, 1500);
+    };
+    if (document.readyState === 'complete') schedule();
+    else window.addEventListener('load', schedule, { once: true });
+    return () => {
+      cancelled = true;
+      window.removeEventListener('load', schedule);
+    };
   }, []);
 
   const items = [
