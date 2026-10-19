@@ -185,7 +185,7 @@ def _call_ai(uploaded: List[Dict[str, str]], gender: str, age: str, complaints: 
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": content},
         ],
-        "max_tokens": 7000 if subscriber else 4096,
+        "max_tokens": 16000 if subscriber else 12000,
     }
 
     req = urllib.request.Request(

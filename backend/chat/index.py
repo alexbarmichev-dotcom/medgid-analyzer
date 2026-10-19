@@ -190,7 +190,7 @@ def _call_ai(context: str, history: list, question: str) -> str:
         messages.append({"role": m["role"], "content": m["content"]})
     messages.append({"role": "user", "content": question})
 
-    payload = {"model": POLZA_MODEL, "messages": messages, "max_tokens": 1500}
+    payload = {"model": POLZA_MODEL, "messages": messages, "max_tokens": 6000}
     req = urllib.request.Request(
         POLZA_URL,
         data=json.dumps(payload).encode(),
