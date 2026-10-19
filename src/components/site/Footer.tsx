@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import Icon from '@/components/ui/icon';
 import Logo from './Logo';
 
 const LEGAL = [
@@ -55,6 +56,17 @@ const Footer = () => {
             </Link>
             <span>Данные хранятся на серверах в России · 152-ФЗ</span>
           </div>
+        </div>
+
+        <div className="mt-6 flex justify-center border-t border-border pt-5">
+          <Link
+            to="/admin"
+            rel="nofollow"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-accent"
+          >
+            <Icon name="Lock" size={14} />
+            Личный кабинет администратора
+          </Link>
         </div>
       </div>
     </footer>
