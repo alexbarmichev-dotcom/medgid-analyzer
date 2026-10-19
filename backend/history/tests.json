@@ -161,6 +161,37 @@
       "method": "GET",
       "path": "/?resource=stats",
       "expectedStatus": 200
+    },
+    {
+      "name": "list published articles is public",
+      "method": "GET",
+      "path": "/?resource=articles",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "ok": true
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "all articles without admin password",
+      "method": "GET",
+      "path": "/?resource=articles&all=1",
+      "expectedStatus": 401
+    },
+    {
+      "name": "create article without admin password",
+      "method": "POST",
+      "path": "/?resource=articles",
+      "body": {
+        "title": "x"
+      },
+      "expectedStatus": 401
+    },
+    {
+      "name": "unknown article slug",
+      "method": "GET",
+      "path": "/?resource=articles&slug=no-such-article",
+      "expectedStatus": 404
     }
   ]
 }

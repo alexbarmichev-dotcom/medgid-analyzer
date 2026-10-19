@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom';
 import Header from '@/components/site/Header';
 import Footer from '@/components/site/Footer';
 import ArticleCard from '@/components/site/ArticleCard';
-import { ARTICLES } from '@/data/articles';
+import { useArticles } from '@/hooks/useArticles';
 
 const Blog = () => {
+  const articles = useArticles();
   useEffect(() => {
     window.scrollTo({ top: 0 });
     const prevTitle = document.title;
@@ -39,7 +40,7 @@ const Blog = () => {
             Статьи о том, как понимать свои анализы и приходить к врачу подготовленным.
           </p>
           <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {ARTICLES.map((a) => (
+            {articles.map((a) => (
               <ArticleCard key={a.slug} article={a} />
             ))}
           </div>

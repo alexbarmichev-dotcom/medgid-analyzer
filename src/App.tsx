@@ -9,6 +9,7 @@ import Faq from "./pages/Faq";
 import About from "./pages/About";
 import Article from "./pages/Article";
 import Blog from "./pages/Blog";
+import AdminArticles from "./pages/AdminArticles";
 import AdminHome from "./pages/AdminHome";
 import AdminFeedback from "./pages/AdminFeedback";
 import AdminPayments from "./pages/AdminPayments";
@@ -36,6 +37,7 @@ const App = () => (
           <Route path="/admin/payments" element={<AdminPayments />} />
           <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
           <Route path="/admin/reviews" element={<AdminReviews />} />
+          <Route path="/admin/articles" element={<AdminArticles />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

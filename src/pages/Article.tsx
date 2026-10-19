@@ -1,9 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import Header from '@/components/site/Header';
 import Footer from '@/components/site/Footer';
-import { ARTICLES } from '@/data/articles';
+import { ARTICLES, type Article as ArticleData } from '@/data/articles';
+import { fetchArticleBySlug, useArticles } from '@/hooks/useArticles';
 import { useNoindex } from '@/hooks/useNoindex';
 
 const URL_RE = /(https?:\/\/[^\s,]+)/g;
@@ -45,9 +46,30 @@ const renderParagraph = (p: string, i: number) => {
 
 const Article = () => {
   const { slug } = useParams();
-  const article = ARTICLES.find((a) => a.slug === slug);
-  useNoindex(!article);
-  const related = ARTICLES.filter((a) => a.slug !== slug).slice(0, 4);
+  const staticArticle = ARTICLES.find((a) => a.slug === slug);
+  const [remoteArticle, setRemoteArticle] = useState<ArticleData | null>(null);
+  const [loadingRemote, setLoadingRemote] = useState(!staticArticle);
+  const allArticles = useArticles();
+  const article = staticArticle || remoteArticle || undefined;
+  useNoindex(!article && !loadingRemote);
+  const related = allArticles.filter((a) => a.slug !== slug).slice(0, 4);
+
+  useEffect(() => {
+    if (staticArticle || !slug) {
+      setLoadingRemote(false);
+      return;
+    }
+    let alive = true;
+    setLoadingRemote(true);
+    fetchArticleBySlug(slug).then((a) => {
+      if (!alive) return;
+      setRemoteArticle(a);
+      setLoadingRemote(false);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [slug, staticArticle]);
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -61,6 +83,16 @@ const Article = () => {
       document.title = prevTitle;
     };
   }, [article]);
+
+  if (!article && loadingRemote) {
+    return (
+      <div className="min-h-screen bg-background font-body text-foreground">
+        <Header />
+        <main className="mx-auto max-w-3xl px-5 py-24 text-center text-ink-soft md:px-8">Загружаем статью…</main>
+        <Footer />
+      </div>
+    );
+  }
 
   if (!article) {
     return (
