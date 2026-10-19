@@ -10,9 +10,12 @@ const ArticleCard = ({ article: a }: { article: Article }) => (
     {a.cover ? (
       <div className="h-40 overflow-hidden">
         <img
-          src={a.cover}
+          src={a.coverWeb ?? a.cover}
           alt={a.title}
+          width={900}
+          height={508}
           loading="lazy"
+          decoding="async"
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
       </div>

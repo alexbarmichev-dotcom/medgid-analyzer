@@ -3,7 +3,9 @@ const Logo = ({ className = '' }: { className?: string }) => {
     <div className={`flex items-center gap-3 ${className}`}>
       <span className="relative grid h-9 w-9 place-items-center rounded-[11px] bg-accent px-[5px] py-0 my-0 mx-0">
         <img
-          src="https://cdn.poehali.dev/projects/a50bf440-39eb-48cd-8c9b-26529e75ba50/bucket/4f83188a-9df1-4eba-ac26-2ef05362e375.jpg"
+          src="/logo-small.webp"
+          width={36}
+          height={36}
           alt="ЛабГид"
           className="h-full w-full mx-0 px-0 rounded-0 object-cover"
         />

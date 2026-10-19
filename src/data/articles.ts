@@ -7,12 +7,14 @@ export interface Article {
   author: string;
   datePublished?: string;
   cover?: string;
+  coverWeb?: string;
   paragraphs: string[];
 }
 
 export const ARTICLES: Article[] = [
   {
     slug: 'dvenadtsat-minut',
+    coverWeb: '/articles/dvenadtsat-minut.webp',
     title: 'Двенадцать минут',
     excerpt:
       'Я засекал. Двенадцать минут — столько длился мой приём у терапевта. За это время нельзя сварить приличное яйцо, но можно решить, как проживёт человек следующие тридцать лет.',
@@ -44,6 +46,7 @@ export const ARTICLES: Article[] = [
   },
   {
     slug: 'vrach-ne-vrag',
+    coverWeb: '/articles/vrach-ne-vrag.webp',
     title: 'Врач — не враг. Врач — это просто бизнесмен в белом халате',
     excerpt:
       'Все хотят жить долго. Все хотят быть здоровыми. Но вот что странно: мы все бежим к врачам со скоростью перепуганной антилопы, а болеть почему-то не перестаём.',
@@ -75,6 +78,7 @@ export const ARTICLES: Article[] = [
   },
   {
     slug: 'mozhno-li-doverjat-onlajn-rasshifrovke-analizov',
+    coverWeb: '/articles/mozhno-li-doverjat.webp',
     datePublished: '2026-10-13',
     title: 'Можно ли доверять онлайн-расшифровке анализов',
     excerpt:

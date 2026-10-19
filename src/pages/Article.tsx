@@ -99,8 +99,11 @@ const Article = () => {
 
           {article.cover && (
             <img
-              src={article.cover}
+              src={article.coverWeb ?? article.cover}
               alt={article.title}
+              width={900}
+              height={508}
+              fetchPriority="high"
               className="mt-8 aspect-[16/9] w-full rounded-3xl object-cover"
             />
           )}
@@ -164,7 +167,7 @@ const Article = () => {
                     {a.cover && (
                       <div className="aspect-[16/9] overflow-hidden">
                         <img
-                          src={a.cover}
+                          src={a.coverWeb ?? a.cover}
                           alt={a.title}
                           loading="lazy"
                           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
