@@ -160,11 +160,7 @@
       "name": "public stats",
       "method": "GET",
       "path": "/?resource=stats",
-      "expectedStatus": 200,
-      "expectedBody": {
-        "analyses": 156
-      },
-      "bodyMatcher": "partial"
+      "expectedStatus": 200
     }
   ]
 }

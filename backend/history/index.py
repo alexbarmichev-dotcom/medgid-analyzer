@@ -346,11 +346,69 @@ def _handle_admin_reviews(event: Dict[str, Any]) -> Dict[str, Any]:
     return _resp(200, {"ok": True, "items": items})
 
 
+MAX_ADMIN_FAILS = 5
+ADMIN_LOCK_MINUTES = 15
+
+
+class AdminLocked(Exception):
+    def __init__(self, seconds: int):
+        self.seconds = seconds
+
+
+def _client_ip(event: Dict[str, Any]) -> str:
+    identity = (event.get("requestContext") or {}).get("identity") or {}
+    return str(identity.get("sourceIp") or "unknown")[:64]
+
+
 def _check_admin_auth(event: Dict[str, Any]) -> bool:
     headers = event.get("headers") or {}
     provided = headers.get("X-Admin-Password") or headers.get("x-admin-password") or ""
     expected = os.environ.get("ADMIN_PASSWORD", "")
-    return bool(expected) and hmac.compare_digest(provided, expected)
+    ip = _client_ip(event).replace("'", "")
+    conn = psycopg2.connect(os.environ["DATABASE_URL"])
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT failed_count, GREATEST(0, CEIL(EXTRACT(EPOCH FROM (locked_until - now())))) "
+                "FROM admin_login_attempts WHERE ip = '" + ip + "'"
+            )
+            row = cur.fetchone()
+            if row and row[1] and row[1] > 0:
+                raise AdminLocked(int(row[1]))
+            ok = bool(expected) and hmac.compare_digest(provided, expected)
+            if ok:
+                if row:
+                    cur.execute("DELETE FROM admin_login_attempts WHERE ip = '" + ip + "'")
+                    conn.commit()
+                return True
+            if provided and expected:
+                cur.execute(
+                    "INSERT INTO admin_login_attempts (ip, failed_count, updated_at) VALUES ('" + ip + "', 1, now()) "
+                    "ON CONFLICT (ip) DO UPDATE SET failed_count = CASE WHEN (admin_login_attempts.locked_until IS NOT NULL "
+                    "AND admin_login_attempts.locked_until <= now()) "
+                    "OR admin_login_attempts.updated_at < now() - interval '15 minutes' THEN 1 ELSE admin_login_attempts.failed_count + 1 END, "
+                    "locked_until = NULL, updated_at = now() RETURNING failed_count"
+                )
+                count = cur.fetchone()[0]
+                if count >= MAX_ADMIN_FAILS:
+                    cur.execute(
+                        "UPDATE admin_login_attempts SET locked_until = now() + interval '"
+                        + str(ADMIN_LOCK_MINUTES) + " minutes' WHERE ip = '" + ip + "'"
+                    )
+                    conn.commit()
+                    raise AdminLocked(ADMIN_LOCK_MINUTES * 60)
+                conn.commit()
+            return False
+    finally:
+        conn.close()
+
+
+def _locked_resp(seconds: int) -> Dict[str, Any]:
+    minutes = max(1, (seconds + 59) // 60)
+    return _resp(429, {
+        "error": "Слишком много неверных попыток. Вход заблокирован, попробуйте через " + str(minutes) + " мин.",
+        "retryAfterSeconds": seconds,
+    })
 
 
 def _list_admin_payments(dsn: str) -> List[Dict[str, Any]]:
@@ -520,7 +578,7 @@ def _handle_stats() -> Dict[str, Any]:
     })
 
 
-def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def _handle(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Business: возвращает историю запросов пользователя (расшифровок анализов) личного
     кабинета ЛабГид, принимает и отдаёт обращения пользователей (resource=feedback),
@@ -550,3 +608,11 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         return _handle_admin(event)
 
     return _handle_history(event)
+
+
+def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    """Точка входа: ограничивает перебор пароля администратора (5 попыток, блок на 15 минут)."""
+    try:
+        return _handle(event, context)
+    except AdminLocked as e:
+        return _locked_resp(e.seconds)

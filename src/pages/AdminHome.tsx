@@ -49,8 +49,16 @@ const AdminHome = () => {
       if (res.ok) {
         sessionStorage.setItem('medgid_admin_pwd', pwd);
         setAuthorized(true);
+      } else if (res.status === 429) {
+        const data = await res.json().catch(() => ({}));
+        sessionStorage.removeItem('medgid_admin_pwd');
+        toast({
+          title: 'Вход временно заблокирован',
+          description: data.error || 'Слишком много неверных попыток. Попробуйте через 15 минут.',
+        });
       } else {
-        toast({ title: 'Неверный пароль' });
+        sessionStorage.removeItem('medgid_admin_pwd');
+        toast({ title: 'Неверный пароль', description: 'После 5 неверных попыток вход блокируется на 15 минут' });
       }
     } catch {
       toast({ title: 'Ошибка сети, попробуйте ещё раз' });

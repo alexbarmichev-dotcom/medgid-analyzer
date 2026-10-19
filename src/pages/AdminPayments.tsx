@@ -69,6 +69,8 @@ const AdminPayments = () => {
         setAuthorized(true);
         sessionStorage.setItem('medgid_admin_pwd', pwd);
         loadUsers(pwd);
+      } else if (res.status === 429) {
+        toast({ title: 'Вход временно заблокирован', description: 'Слишком много неверных попыток. Попробуйте через 15 минут.' });
       } else {
         toast({ title: 'Неверный пароль' });
       }

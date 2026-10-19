@@ -66,7 +66,13 @@ const AdminSubscriptions = () => {
         headers: { 'X-Admin-Password': pwd },
       });
       if (!res.ok) {
-        if (!silent) toast({ title: 'Неверный пароль' });
+        if (!silent) {
+          toast(
+            res.status === 429
+              ? { title: 'Вход временно заблокирован', description: 'Слишком много неверных попыток. Попробуйте через 15 минут.' }
+              : { title: 'Неверный пароль' },
+          );
+        }
         return false;
       }
       const data = await res.json();
