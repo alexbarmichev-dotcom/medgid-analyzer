@@ -23,7 +23,7 @@ import jobs
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 POLZA_URL = "https://polza.ai/api/v1/chat/completions"
-POLZA_MODEL = "anthropic/claude-sonnet-5"
+POLZA_MODEL = "anthropic/claude-sonnet-5.5"
 
 YOOKASSA_API = "https://api.yookassa.ru/v3"
 PRICE_RUB = "150.00"

@@ -13,7 +13,7 @@ import psycopg2
 import psycopg2.extras
 
 POLZA_URL = "https://polza.ai/api/v1/chat/completions"
-POLZA_MODEL = "anthropic/claude-sonnet-5"
+POLZA_MODEL = "anthropic/claude-sonnet-5.5"
 CHAT_PERIOD_DAYS = 30
 CHAT_TARIFF_ID = "sub_12m"
 MAX_QUESTION_LEN = 2000
