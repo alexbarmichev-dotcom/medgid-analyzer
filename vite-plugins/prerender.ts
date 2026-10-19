@@ -283,7 +283,8 @@ export default function prerender(): Plugin {
                 image: a.cover ? [a.cover] : [LOGO],
                 author: { '@type': 'Person', name: a.author },
                 publisher: { '@id': `${SITE}/#organization` },
-                dateModified: new Date().toISOString().slice(0, 10),
+                ...(a.datePublished ? { datePublished: a.datePublished } : {}),
+                dateModified: a.datePublished ?? new Date().toISOString().slice(0, 10),
               },
             ],
             a.cover

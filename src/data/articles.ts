@@ -5,6 +5,7 @@ export interface Article {
   seoTitle?: string;
   seoDescription?: string;
   author: string;
+  datePublished?: string;
   cover?: string;
   paragraphs: string[];
 }
@@ -74,6 +75,7 @@ export const ARTICLES: Article[] = [
   },
   {
     slug: 'mozhno-li-doverjat-onlajn-rasshifrovke-analizov',
+    datePublished: '2026-10-13',
     title: 'Можно ли доверять онлайн-расшифровке анализов',
     excerpt:
       'Можно ли доверять нейросети, которая взялась расшифровывать мою кровь? Разбираемся без паники и без слепой веры: что ИИ-разбор анализов умеет, чего не умеет и почему подготовленный пациент получает от визита к врачу больше.',
