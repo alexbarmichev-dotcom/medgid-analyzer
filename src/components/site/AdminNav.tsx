@@ -7,7 +7,6 @@ const LINKS = [
   { href: '/admin/subscriptions', label: 'Подписки', icon: 'KeyRound' },
   { href: '/admin/feedback', label: 'Обращения', icon: 'MessageSquare' },
   { href: '/admin/reviews', label: 'Отзывы', icon: 'Star' },
-  { href: '/admin/articles', label: 'Статьи', icon: 'BookOpen' },
 ];
 
 const AdminNav = () => {

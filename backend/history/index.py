@@ -1,6 +1,5 @@
 import json
 import os
-import re
 import uuid
 import base64
 import hmac
@@ -22,7 +21,7 @@ def _resp(status: int, body: Dict[str, Any]) -> Dict[str, Any]:
         "headers": {
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+            "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
             "Access-Control-Allow-Headers": "Content-Type, X-Authorization, X-Admin-Password",
         },
         "isBase64Encoded": False,
@@ -347,190 +346,6 @@ def _handle_admin_reviews(event: Dict[str, Any]) -> Dict[str, Any]:
     return _resp(200, {"ok": True, "items": items})
 
 
-ARTICLE_STATUSES = {"draft", "published"}
-SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
-MAX_COVER_BYTES = 5 * 1024 * 1024
-
-
-def _article_row(r: Dict[str, Any], with_body: bool) -> Dict[str, Any]:
-    item = {
-        "id": r["id"],
-        "slug": r["slug"],
-        "title": r["title"],
-        "excerpt": r["excerpt"],
-        "author": r["author"],
-        "cover": r["cover_url"],
-        "seoTitle": r["seo_title"],
-        "seoDescription": r["seo_description"],
-        "status": r["status"],
-        "publishedAt": r["published_at"],
-        "updatedAt": r["updated_at"],
-    }
-    if with_body:
-        item["body"] = r["body"]
-    return item
-
-
-def _articles_query(dsn: str, where: str, args: tuple) -> List[Dict[str, Any]]:
-    conn = psycopg2.connect(dsn)
-    try:
-        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute(
-                "SELECT id, slug, title, excerpt, body, author, cover_url, seo_title, seo_description, "
-                "status, published_at, updated_at FROM articles " + where, args
-            )
-            return list(cur.fetchall())
-    finally:
-        conn.close()
-
-
-def _upload_article_cover(body: Dict[str, Any]) -> Dict[str, Any]:
-    mime = (body.get("mime") or "").lower()
-    data_b64 = body.get("data") or ""
-    if mime not in ("image/png", "image/jpeg", "image/webp"):
-        return _resp(400, {"error": "Обложка должна быть в формате JPG, PNG или WebP"})
-    try:
-        raw = base64.b64decode(data_b64, validate=True)
-    except Exception:
-        return _resp(400, {"error": "Не удалось прочитать файл"})
-    if not raw:
-        return _resp(400, {"error": "Пустой файл"})
-    if len(raw) > MAX_COVER_BYTES:
-        return _resp(400, {"error": "Файл больше 5 МБ"})
-    s3 = boto3.client(
-        "s3",
-        endpoint_url="https://bucket.poehali.dev",
-        aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
-        aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
-    )
-    ext = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp"}[mime]
-    key = f"articles/{uuid.uuid4()}.{ext}"
-    s3.put_object(Bucket="files", Key=key, Body=raw, ContentType=mime)
-    url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{key}"
-    return _resp(200, {"ok": True, "url": url})
-
-
-def _validate_article(body: Dict[str, Any]) -> Any:
-    title = (body.get("title") or "").strip()
-    slug = (body.get("slug") or "").strip().lower()
-    excerpt = (body.get("excerpt") or "").strip()
-    text = (body.get("body") or "").strip()
-    author = (body.get("author") or "").strip() or "Команда ЛабГид"
-    cover = (body.get("cover") or "").strip() or None
-    seo_title = (body.get("seoTitle") or "").strip() or None
-    seo_description = (body.get("seoDescription") or "").strip() or None
-    status = body.get("status") or "draft"
-    if not title or len(title) > 300:
-        return None, "Укажите заголовок (до 300 символов)"
-    if not slug or len(slug) > 160 or not SLUG_RE.match(slug):
-        return None, "Адрес статьи: только латинские буквы, цифры и дефисы"
-    if not excerpt:
-        return None, "Напишите короткое описание для карточки статьи"
-    if status not in ARTICLE_STATUSES:
-        return None, "Некорректный статус"
-    if status == "published" and len(text) < 50:
-        return None, "Для публикации напишите текст статьи"
-    if cover and not cover.startswith("https://"):
-        return None, "Некорректная ссылка на обложку"
-    return {
-        "title": title, "slug": slug, "excerpt": excerpt, "body": text, "author": author,
-        "cover": cover, "seo_title": seo_title, "seo_description": seo_description, "status": status,
-    }, None
-
-
-def _handle_articles(event: Dict[str, Any]) -> Dict[str, Any]:
-    method = event.get("httpMethod", "GET")
-    dsn = os.environ["DATABASE_URL"]
-    params = event.get("queryStringParameters") or {}
-
-    if method == "GET":
-        if params.get("all"):
-            if not _check_admin_auth(event):
-                return _resp(401, {"error": "Неверный пароль администратора"})
-            rows = _articles_query(dsn, "ORDER BY updated_at DESC", ())
-            return _resp(200, {"ok": True, "items": [_article_row(r, True) for r in rows]})
-        slug = params.get("slug")
-        if slug:
-            rows = _articles_query(dsn, "WHERE slug = %s AND status = 'published'", (slug,))
-            if not rows:
-                return _resp(404, {"error": "Статья не найдена"})
-            return _resp(200, {"ok": True, "item": _article_row(rows[0], True)})
-        rows = _articles_query(dsn, "WHERE status = 'published' ORDER BY published_at DESC", ())
-        return _resp(200, {"ok": True, "items": [_article_row(r, False) for r in rows]})
-
-    if not _check_admin_auth(event):
-        return _resp(401, {"error": "Неверный пароль администратора"})
-
-    try:
-        body = json.loads(event.get("body") or "{}")
-    except Exception:
-        return _resp(400, {"error": "Некорректный запрос"})
-
-    if method == "POST" and params.get("action") == "cover":
-        return _upload_article_cover(body)
-
-    if method == "DELETE":
-        item_id = params.get("id")
-        if not item_id:
-            return _resp(400, {"error": "Не указан id"})
-        conn = psycopg2.connect(dsn)
-        try:
-            with conn.cursor() as cur:
-                cur.execute("DELETE FROM articles WHERE id = %s", (int(item_id),))
-                deleted = cur.rowcount > 0
-            conn.commit()
-        finally:
-            conn.close()
-        if not deleted:
-            return _resp(404, {"error": "Статья не найдена"})
-        return _resp(200, {"ok": True})
-
-    if method in ("POST", "PUT"):
-        data, error = _validate_article(body)
-        if error:
-            return _resp(400, {"error": error})
-        conn = psycopg2.connect(dsn)
-        try:
-            with conn.cursor() as cur:
-                if method == "POST":
-                    cur.execute("SELECT 1 FROM articles WHERE slug = %s", (data["slug"],))
-                    if cur.fetchone():
-                        return _resp(409, {"error": "Статья с таким адресом уже есть, измените адрес"})
-                    cur.execute(
-                        "INSERT INTO articles (slug, title, excerpt, body, author, cover_url, seo_title, "
-                        "seo_description, status, published_at) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,"
-                        "CASE WHEN %s = 'published' THEN now() ELSE NULL END) RETURNING id",
-                        (data["slug"], data["title"], data["excerpt"], data["body"], data["author"],
-                         data["cover"], data["seo_title"], data["seo_description"], data["status"], data["status"]),
-                    )
-                    new_id = cur.fetchone()[0]
-                else:
-                    item_id = params.get("id")
-                    if not item_id:
-                        return _resp(400, {"error": "Не указан id"})
-                    cur.execute("SELECT 1 FROM articles WHERE slug = %s AND id <> %s", (data["slug"], int(item_id)))
-                    if cur.fetchone():
-                        return _resp(409, {"error": "Статья с таким адресом уже есть, измените адрес"})
-                    cur.execute(
-                        "UPDATE articles SET slug=%s, title=%s, excerpt=%s, body=%s, author=%s, cover_url=%s, "
-                        "seo_title=%s, seo_description=%s, status=%s, "
-                        "published_at = CASE WHEN %s = 'published' THEN COALESCE(published_at, now()) ELSE NULL END, "
-                        "updated_at = now() WHERE id = %s",
-                        (data["slug"], data["title"], data["excerpt"], data["body"], data["author"],
-                         data["cover"], data["seo_title"], data["seo_description"], data["status"], data["status"],
-                         int(item_id)),
-                    )
-                    if cur.rowcount == 0:
-                        return _resp(404, {"error": "Статья не найдена"})
-                    new_id = int(item_id)
-            conn.commit()
-        finally:
-            conn.close()
-        return _resp(200, {"ok": True, "id": new_id})
-
-    return _resp(405, {"error": "Метод не поддерживается"})
-
-
 MAX_ADMIN_FAILS = 5
 ADMIN_LOCK_MINUTES = 15
 
@@ -818,8 +633,6 @@ def _handle(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         return _handle_feedback(event)
     if params.get("resource") == "reviews":
         return _handle_reviews(event)
-    if params.get("resource") == "articles":
-        return _handle_articles(event)
     if params.get("resource") == "admin":
         return _handle_admin(event)
 

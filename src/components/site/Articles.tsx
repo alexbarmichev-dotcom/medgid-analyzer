@@ -1,10 +1,9 @@
 import { Link } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
-import { useArticles } from '@/hooks/useArticles';
+import { ARTICLES } from '@/data/articles';
 import ArticleCard from '@/components/site/ArticleCard';
 
 const Articles = () => {
-  const articles = useArticles();
   return (
     <section id="articles" className="relative scroll-mt-20 bg-card">
       <div className="mx-auto max-w-7xl px-5 py-20 md:px-8">
@@ -26,7 +25,7 @@ const Articles = () => {
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {articles.slice(0, 3).map((a) => (
+          {ARTICLES.slice(0, 3).map((a) => (
             <ArticleCard key={a.slug} article={a} />
           ))}
         </div>

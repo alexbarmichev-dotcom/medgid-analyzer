@@ -32,12 +32,6 @@ const SECTIONS = [
     description: 'Модерация отзывов клиентов перед публикацией на главной странице',
     icon: 'Star',
   },
-  {
-    href: '/admin/articles',
-    label: 'Статьи',
-    description: 'Пишите и публикуйте статьи блога сами, с обложкой, без помощи разработчика',
-    icon: 'BookOpen',
-  },
 ];
 
 const AdminHome = () => {
