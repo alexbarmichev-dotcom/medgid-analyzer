@@ -14,15 +14,13 @@ const Articles = () => {
             Статьи
           </span>
           <h2 className="font-head text-3xl font-extrabold tracking-[-0.03em] sm:text-4xl">
-            <Link to="/blog" className="group inline-flex flex-wrap items-center gap-x-3">
-              <span>
+            <Link to="/blog" className="group inline-flex flex-wrap items-center gap-x-4 gap-y-4">
+              <span className="pb-1">
                 Читайте о <span className="hand-underline text-accent">здоровье и анализах</span>
               </span>
-              <Icon
-                name="ArrowRight"
-                size={28}
-                className="text-accent transition-transform group-hover:translate-x-1"
-              />
+              <span className="grid h-11 w-11 place-items-center rounded-full bg-accent text-accent-foreground shadow-lg shadow-accent/30 transition-transform group-hover:translate-x-1">
+                <Icon name="ArrowRight" size={26} strokeWidth={3} />
+              </span>
             </Link>
           </h2>
         </div>
