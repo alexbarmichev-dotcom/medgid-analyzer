@@ -43,6 +43,11 @@ export const ARTICLES: Article[] = [
       'Лаб-Гид не ставит диагнозов и не заменяет врача. Он нужен, чтобы вы заметили лампочку и пришли в сервис не с жалобой «что-то стучит», а с точным вопросом.',
       'Скачать Лаб-Гид: https://лаб-гид.рф/',
       'Дорога впереди длинная. Лампочку можно вовремя заметить, а можно ехать дальше и надеяться. Оба варианта легко сделать.',
+      '## Источники',
+      'Международная диабетическая федерация, IDF Diabetes Atlas, 11-е издание (2025): 589 млн взрослых с диабетом, 252 млн без диагноза, прогноз 853 млн к 2050 году — https://idf.org/news-and-resources/news/idf-diabetes-atlas-11th-edition/',
+      'Полный текст отчёта IDF Diabetes Atlas, 11-е издание, 2025 — https://media.idf.org/media/uploads/sites/3/2025/10/IDF_Diabetes_Atlas_11th_Edition_2025_WEB.pdf',
+      'Росстат, статистический сборник «Здравоохранение в России. 2025» (данные за 2024 год) — https://rosstat.gov.ru/storage/mediabank/Zdravooxran_2025.pdf',
+      'Заявление директора НМИЦ эндокринологии Н. Мокрышевой о не выявленном диабете в России, 19 мая 2026 года — https://www.rzn.info/news/2026/5/19/pochti-shest-mln-rossiyan-s-saharnym-diabetom-ne-znayut-o-diagnoze-zayavila-ekspert-345502.html',
     ],
   },
   {
