@@ -160,7 +160,14 @@ const Article = () => {
               return renderParagraph(p, i);
             })}
           </div>
-          <p className="mt-10 font-caveat text-2xl text-hand">{article.author}</p>
+          <p className="mt-10 font-caveat text-2xl text-hand">
+            {article.author}
+            {article.datePublished && (
+              <span className="ml-3 font-body text-base text-muted-foreground">
+                {article.datePublished.split('-').reverse().map((v, i) => (i === 2 ? v.slice(2) : v)).join('.')}
+              </span>
+            )}
+          </p>
 
           <div className="mt-12 overflow-hidden rounded-3xl bg-hand p-7 text-center text-accent-foreground shadow-lg md:p-10">
             <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-white/15">
