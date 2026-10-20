@@ -8,6 +8,7 @@
 - [Частые вопросы](https://лаб-гид.рф/faq): стоимость, оплата, какие анализы принимаются, хранение данных
 
 ## Статьи
+- [Биохимический анализ крови: расшифровка показателей](https://лаб-гид.рф/articles/biokhimicheskiy-analiz-krovi-rasshifrovka)
 - [Расшифровка общего анализа крови: что означают все показатели](https://лаб-гид.рф/articles/rasshifrovka-obshchego-analiza-krovi)
 - [Лампочка на панели уже горит: про преддиабет](https://лаб-гид.рф/articles/lampochka-na-paneli)
 - [Как люди научились читать анализы: от колбы с мочой до нейросети](https://лаб-гид.рф/articles/kak-lyudi-nauchilis-chitat-analizy)
