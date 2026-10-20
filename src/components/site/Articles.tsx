@@ -25,7 +25,7 @@ const Articles = () => {
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {ARTICLES.slice(0, 3).map((a) => (
+          {ARTICLES.filter((a) => !a.hideOnHome).slice(0, 3).map((a) => (
             <ArticleCard key={a.slug} article={a} />
           ))}
         </div>

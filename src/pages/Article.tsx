@@ -25,7 +25,35 @@ const renderWithLinks = (text: string) =>
     ),
   );
 
+const renderTable = (p: string, i: number) => {
+  const rows = p.split('\n').map((r) => r.replace(/^\|\s*/, '').split(' | '));
+  const [head, ...body] = rows;
+  return (
+    <div key={i} className="overflow-x-auto rounded-2xl border border-border bg-card">
+      <table className="w-full text-left text-[0.95rem]">
+        <thead className="bg-hand/10 text-foreground">
+          <tr>
+            {head.map((c, j) => (
+              <th key={j} className="px-4 py-3 font-semibold">{c}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {body.map((r, k) => (
+            <tr key={k} className="border-t border-border">
+              {r.map((c, j) => (
+                <td key={j} className={`px-4 py-3 ${j === 0 ? 'font-medium text-foreground' : ''}`}>{c}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
 const renderParagraph = (p: string, i: number) => {
+  if (p.startsWith('| ')) return renderTable(p, i);
   if (p.startsWith('### ')) {
     return (
       <h3 key={i} className="pt-2 font-head text-lg font-bold text-foreground">

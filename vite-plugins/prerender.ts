@@ -69,7 +69,7 @@ const homeBody = () =>
 <li>Понимание каждого показателя</li><li>Оценка с учётом возраста, пола и индивидуальных факторов</li><li>Доступное объяснение отклонений без постановки диагноза</li><li>Готовые вопросы для врача</li><li>Личный дневник здоровья с графиками динамики</li></ul></section>
 <section id="pricing"><h2>Тарифы</h2><p>Разбор одного анализа — 150 рублей, без подписок и скрытых платежей. Также доступна подписка на 12 месяцев с медицинским дневником, графиками динамики и AI-чатом.</p></section>
 <section id="security"><h2>Безопасность данных</h2><p>Файлы передаются по защищённому соединению. Вся база хранится на серверах на территории РФ в соответствии с 152-ФЗ. Мы не запрашиваем ФИО, адрес и номер полиса. Историю исследований можно удалить в любой момент.</p></section>
-<section id="articles"><h2>Статьи о здоровье и анализах</h2><ul>${ARTICLES.map(
+<section id="articles"><h2>Статьи о здоровье и анализах</h2><ul>${ARTICLES.filter((a) => !a.hideOnHome).map(
     (a) => `<li><a href="/articles/${a.slug}"><h3>${esc(a.title)}</h3></a><p>${esc(a.excerpt)}</p></li>`
   ).join('')}</ul></section>
 ${faqHtml(true)}
@@ -93,7 +93,12 @@ const articleBody = (slug: string) => {
   const a = ARTICLES.find((x) => x.slug === slug)!;
   return `${nav}<main><article><h1>${esc(a.title)}</h1><p>Автор: ${esc(a.author)}</p>${a.paragraphs
     .map((p) =>
-      p.startsWith('### ')
+      p.startsWith('| ')
+        ? `<table>${p
+            .split('\n')
+            .map((r) => `<tr>${r.replace(/^\|\s*/, '').split(' | ').map((c) => `<td>${esc(c)}</td>`).join('')}</tr>`)
+            .join('')}</table>`
+        : p.startsWith('### ')
         ? `<h3>${esc(p.slice(4))}</h3>`
         : p.startsWith('## ')
           ? `<h2>${esc(p.slice(3))}</h2>`
