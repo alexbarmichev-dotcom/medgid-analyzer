@@ -16,6 +16,11 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://лаб-гид.рф/articles/lampochka-na-paneli</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://лаб-гид.рф/articles/kak-lyudi-nauchilis-chitat-analizy</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
