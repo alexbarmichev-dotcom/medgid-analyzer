@@ -134,24 +134,25 @@ const Article = () => {
           </div>
           <p className="mt-10 font-caveat text-2xl text-hand">{article.author}</p>
 
-          <div className="mt-12 rounded-3xl border-2 border-accent/25 bg-card p-7 text-center md:p-10">
-            <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-hand/10 text-hand">
-              <Icon name="FileSearch" size={24} />
+          <div className="mt-12 overflow-hidden rounded-3xl bg-hand p-7 text-center text-accent-foreground shadow-lg md:p-10">
+            <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-white/15">
+              <Icon name="FileSearch" size={28} />
             </span>
-            <h2 className="mt-4 font-head text-xl font-bold sm:text-2xl">
+            <h2 className="mt-4 font-head text-2xl font-extrabold leading-tight sm:text-3xl">
               Придите к врачу подготовленным
             </h2>
-            <p className="mx-auto mt-3 max-w-md text-[0.95rem] leading-relaxed text-ink-soft">
-              Загрузите фото анализа — получите понятный разбор показателей и список вопросов для
-              врача за пару минут.
+            <p className="mx-auto mt-3 max-w-md text-[1rem] leading-relaxed opacity-90">
+              Сфотографируйте бланк — получите понятный разбор каждого показателя и список вопросов
+              для врача за 30–60 секунд.
             </p>
             <Link
               to="/#try"
-              className="mt-6 inline-flex items-center gap-2 rounded-[var(--radius)] bg-hand px-6 py-3.5 text-base font-semibold text-accent-foreground transition-transform hover:-translate-y-0.5"
+              className="mt-6 inline-flex items-center gap-2 rounded-[var(--radius)] bg-foreground px-7 py-4 text-base font-semibold text-background transition-transform hover:-translate-y-0.5"
             >
-              Расшифровать свой анализ
+              Расшифровать свой анализ — 150&nbsp;₽
               <Icon name="ArrowRight" size={18} />
             </Link>
+            <p className="mt-3 text-sm opacity-80">Без регистрации и подписки</p>
           </div>
 
           {related.length > 0 && (
