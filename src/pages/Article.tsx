@@ -75,7 +75,11 @@ const Article = () => {
   const { slug } = useParams();
   const article = ARTICLES.find((a) => a.slug === slug);
   useNoindex(!article);
-  const related = ARTICLES.filter((a) => a.slug !== slug).slice(0, 4);
+  const idx = ARTICLES.findIndex((a) => a.slug === slug);
+  const related =
+    idx < 0
+      ? []
+      : [1, 2, 3].map((n) => ARTICLES[(idx + n) % ARTICLES.length]).filter((a) => a.slug !== slug);
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -193,7 +197,7 @@ const Article = () => {
           {related.length > 0 && (
             <section className="mt-14">
               <h2 className="mb-5 font-head text-xl font-bold sm:text-2xl">Читайте также</h2>
-              <div className="grid gap-5 sm:grid-cols-2">
+              <div className="grid gap-5 md:grid-cols-3">
                 {related.map((a) => (
                   <Link
                     key={a.slug}
