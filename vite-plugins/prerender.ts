@@ -289,7 +289,7 @@ export default function prerender(): Plugin {
                 author: { '@type': 'Person', name: a.author },
                 publisher: { '@id': `${SITE}/#organization` },
                 ...(a.datePublished ? { datePublished: a.datePublished } : {}),
-                dateModified: a.datePublished ?? new Date().toISOString().slice(0, 10),
+                dateModified: a.datePublished ?? '2026-10-08',
               },
             ],
             a.cover
@@ -298,17 +298,18 @@ export default function prerender(): Plugin {
       );
 
       const today = new Date().toISOString().slice(0, 10);
+      const latest = ARTICLES.map((a) => a.datePublished ?? '').sort().pop() || today;
       const urls = [
-        { loc: '/', freq: 'weekly', prio: '1.0' },
-        { loc: '/faq', freq: 'monthly', prio: '0.8' },
-        { loc: '/about', freq: 'monthly', prio: '0.7' },
-        { loc: '/blog', freq: 'weekly', prio: '0.8' },
-        ...ARTICLES.map((a) => ({ loc: `/articles/${a.slug}`, freq: 'monthly', prio: '0.6' })),
+        { loc: '/', freq: 'weekly', prio: '1.0', mod: latest },
+        { loc: '/faq', freq: 'monthly', prio: '0.8', mod: today },
+        { loc: '/about', freq: 'monthly', prio: '0.7', mod: today },
+        { loc: '/blog', freq: 'weekly', prio: '0.8', mod: latest },
+        ...ARTICLES.map((a) => ({ loc: `/articles/${a.slug}`, freq: 'monthly', prio: '0.6', mod: a.datePublished ?? today })),
       ];
       const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls
         .map(
           (u) =>
-            `  <url>\n    <loc>${SITE}${u.loc}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${u.freq}</changefreq>\n    <priority>${u.prio}</priority>\n  </url>`
+            `  <url>\n    <loc>${SITE}${u.loc}</loc>\n    <lastmod>${u.mod}</lastmod>\n    <changefreq>${u.freq}</changefreq>\n    <priority>${u.prio}</priority>\n  </url>`
         )
         .join('\n')}\n</urlset>\n`;
       fs.writeFileSync(path.join(outDir, 'sitemap.xml'), xml);

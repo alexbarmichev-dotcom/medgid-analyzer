@@ -190,6 +190,7 @@ export const ARTICLES: Article[] = [
   },
   {
     slug: 'dvenadtsat-minut',
+    datePublished: '2026-10-08',
     coverWeb: '/articles/dvenadtsat-minut.webp',
     title: 'Двенадцать минут',
     excerpt:
@@ -222,6 +223,7 @@ export const ARTICLES: Article[] = [
   },
   {
     slug: 'vrach-ne-vrag',
+    datePublished: '2026-10-08',
     coverWeb: '/articles/vrach-ne-vrag.webp',
     title: 'Врач — не враг. Врач — это просто бизнесмен в белом халате',
     excerpt:
