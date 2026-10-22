@@ -16,7 +16,7 @@ export interface Article {
 export const ARTICLES: Article[] = [
   {
     slug: 'biokhimicheskiy-analiz-krovi-rasshifrovka',
-    refSlugs: ['glyukoza-norma', 'kholesterin-norma', 'alt-norma', 'ast-norma', 'kreatinin-norma', 'bilirubin-norma'],
+    refSlugs: ['glyukoza-norma', 'kholesterin-norma', 'alt-norma', 'ast-norma', 'kreatinin-norma', 'bilirubin-norma', 'obshchiy-belok-norma'],
     hideOnHome: true,
     datePublished: '2026-10-20',
     title: 'Биохимический анализ крови: расшифровка показателей',
@@ -59,7 +59,7 @@ export const ARTICLES: Article[] = [
   },
   {
     slug: 'rasshifrovka-obshchego-analiza-krovi',
-    refSlugs: ['gemoglobin-norma', 'ferritin-norma'],
+    refSlugs: ['gemoglobin-norma', 'leykocity-norma', 'trombocity-norma', 'soe-norma', 'ferritin-norma'],
     hideOnHome: true,
     datePublished: '2026-10-20',
     title: 'Расшифровка общего анализа крови: что означают все показатели',
