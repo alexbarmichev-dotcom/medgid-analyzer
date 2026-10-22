@@ -79,6 +79,8 @@ const UnitCalculator = () => {
           <nav aria-label="Хлебные крошки" className="mb-6 text-sm text-muted-foreground">
             <Link to="/" className="hover:text-accent">Главная</Link>
             <span className="mx-2">/</span>
+            <Link to="/spravochnik" className="hover:text-accent">Справочник</Link>
+            <span className="mx-2">/</span>
             <span className="text-foreground">Калькулятор единиц</span>
           </nav>
 

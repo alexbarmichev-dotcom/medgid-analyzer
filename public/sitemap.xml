@@ -25,6 +25,42 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://лаб-гид.рф/spravochnik</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://лаб-гид.рф/spravochnik/gemoglobin-norma</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://лаб-гид.рф/spravochnik/glyukoza-norma</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://лаб-гид.рф/spravochnik/kholesterin-norma</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://лаб-гид.рф/spravochnik/alt-norma</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://лаб-гид.рф/spravochnik/ast-norma</loc>
+    <lastmod>2026-10-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://лаб-гид.рф/spravochnik/kalkulyator-mmol-mgdl</loc>
     <lastmod>2026-10-22</lastmod>
     <changefreq>monthly</changefreq>

@@ -11,6 +11,8 @@ import About from "./pages/About";
 import Article from "./pages/Article";
 import Blog from "./pages/Blog";
 import UnitCalculator from "./pages/UnitCalculator";
+import ReferenceHub from "./pages/ReferenceHub";
+import ReferencePage from "./pages/ReferencePage";
 import NotFound from "./pages/NotFound";
 import InstallBanner from "@/components/site/InstallBanner";
 
@@ -34,7 +36,9 @@ const App = () => (
           <Route path="/faq" element={<Faq />} />
           <Route path="/about" element={<About />} />
           <Route path="/blog" element={<Blog />} />
+          <Route path="/spravochnik" element={<ReferenceHub />} />
           <Route path="/spravochnik/kalkulyator-mmol-mgdl" element={<UnitCalculator />} />
+          <Route path="/spravochnik/:slug" element={<ReferencePage />} />
           <Route path="/articles/:slug" element={<Article />} />
           <Route path="/admin" element={<AdminHome />} />
           <Route path="/admin/feedback" element={<AdminFeedback />} />

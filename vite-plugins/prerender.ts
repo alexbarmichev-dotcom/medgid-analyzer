@@ -4,6 +4,7 @@ import type { Plugin } from 'vite';
 import { ARTICLES } from '../src/data/articles';
 import { FAQ_GROUPS } from '../src/data/faq';
 import { CALC_DESC, CALC_FAQ, CALC_H1, CALC_LEAD, CALC_PATH, CALC_TITLE, COEF_ROWS, EXAMPLE_ROWS } from '../src/data/unitCalc';
+import { REF_BASE, REF_DISCLAIMER, REF_HUB_DESC, REF_HUB_H1, REF_HUB_LEAD, REF_HUB_TITLE, REF_PAGES, refPath } from '../src/data/reference';
 import { ABOUT_LEAD, ABOUT_SECTIONS } from '../src/data/about';
 
 const SITE = 'https://лаб-гид.рф';
@@ -46,7 +47,7 @@ const LD_BLOCK = /<script type="application\/ld\+json">[\s\S]*?<\/script>\s*/g;
 const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-const nav = `<header><a href="/">ЛабГид</a><nav><a href="/#how">Как это работает</a> <a href="/#pricing">Тарифы</a> <a href="/blog">Статьи</a> <a href="/spravochnik/kalkulyator-mmol-mgdl">Калькулятор единиц</a> <a href="/about">О сервисе</a> <a href="/faq">Частые вопросы</a></nav></header>`;
+const nav = `<header><a href="/">ЛабГид</a><nav><a href="/#how">Как это работает</a> <a href="/#pricing">Тарифы</a> <a href="/blog">Статьи</a> <a href="/spravochnik">Справочник</a> <a href="/about">О сервисе</a> <a href="/faq">Частые вопросы</a></nav></header>`;
 const footer = `<footer><p>ЛабГид — информационный сервис. Не ставит диагноз и не заменяет консультацию врача.</p></footer>`;
 
 const faqHtml = (withTitle: boolean) =>
@@ -165,6 +166,29 @@ const calcBody = () => {
   ).join('')}<p><a href="/#try">Загрузить бланк</a></p></main>${footer}`;
 };
 
+const refTbl = (head: string[], rows: string[][]) =>
+  `<table><tr>${head.map((h) => `<th>${esc(h)}</th>`).join('')}</tr>${rows
+    .map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join('')}</tr>`)
+    .join('')}</table>`;
+const refList = (title: string, items: string[]) =>
+  `<h2>${esc(title)}</h2><ul>${items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>`;
+
+const refHubBody = () =>
+  `${nav}<main><h1>${esc(REF_HUB_H1)}</h1><p>${esc(REF_HUB_LEAD)}</p><ul>${REF_PAGES.map(
+    (p) => `<li><a href="${refPath(p.slug)}">${esc(p.seoTitle)}</a></li>`
+  ).join('')}<li><a href="${CALC_PATH}">Калькулятор единиц анализов</a></li></ul><p>${esc(REF_DISCLAIMER)}</p></main>${footer}`;
+
+const refPageBody = (p: (typeof REF_PAGES)[number]) =>
+  `${nav}<main><h1>${esc(p.h1)}</h1><p>${esc(p.lead)}</p>${p.tables
+    .map((t) => `<h2>${esc(t.title)}</h2>${refTbl(t.head, t.rows)}`)
+    .join('')}${p.calc ? `<p><a href="${CALC_PATH}">Перевести единицы в калькуляторе</a></p>` : ''}${
+    p.low ? refList(p.low.title, p.low.items) : ''
+  }${refList(p.high.title, p.high.items)}<h2>Как подготовиться к анализу</h2><p>${esc(p.prep)}</p><h2>Частые вопросы</h2>${p.faq
+    .map(([q, a]) => `<p><b>${esc(q)}</b> ${esc(a)}</p>`)
+    .join('')}<p><a href="/#try">Расшифровать свой анализ — 150 ₽</a></p><p>${REF_PAGES.filter((x) => x.slug !== p.slug)
+    .map((x) => `<a href="${refPath(x.slug)}">${esc(x.short)}</a>`)
+    .join(' ')}</p><p>${esc(REF_DISCLAIMER)}</p></main>${footer}`;
+
 const faqEntities = () =>
   FAQ_GROUPS.flatMap((g) =>
     g.items.map((i) => ({
@@ -230,6 +254,41 @@ export default function prerender(): Plugin {
             ]),
             { '@type': 'FAQPage', mainEntity: faqEntities() },
           ]
+        )
+      );
+
+      write(
+        outDir,
+        REF_BASE.slice(1),
+        withMeta(base, refHubBody(), `${REF_HUB_TITLE} — ЛабГид`, REF_HUB_DESC, REF_BASE, [
+          ORG,
+          breadcrumbs([
+            { name: 'Главная', path: '/' },
+            { name: 'Справочник', path: REF_BASE },
+          ]),
+        ])
+      );
+
+      REF_PAGES.forEach((p) =>
+        write(
+          outDir,
+          refPath(p.slug).slice(1),
+          withMeta(base, refPageBody(p), `${p.seoTitle} — ЛабГид`, p.description, refPath(p.slug), [
+            ORG,
+            breadcrumbs([
+              { name: 'Главная', path: '/' },
+              { name: 'Справочник', path: REF_BASE },
+              { name: p.short, path: refPath(p.slug) },
+            ]),
+            {
+              '@type': 'FAQPage',
+              mainEntity: p.faq.map(([q, a]) => ({
+                '@type': 'Question',
+                name: q,
+                acceptedAnswer: { '@type': 'Answer', text: a },
+              })),
+            },
+          ])
         )
       );
 
@@ -351,6 +410,8 @@ export default function prerender(): Plugin {
         { loc: '/faq', freq: 'monthly', prio: '0.8', mod: today },
         { loc: '/about', freq: 'monthly', prio: '0.7', mod: today },
         { loc: '/blog', freq: 'weekly', prio: '0.8', mod: latest },
+        { loc: REF_BASE, freq: 'monthly', prio: '0.8', mod: today },
+        ...REF_PAGES.map((p) => ({ loc: refPath(p.slug), freq: 'monthly', prio: '0.7', mod: today })),
         { loc: CALC_PATH, freq: 'monthly', prio: '0.7', mod: today },
         ...ARTICLES.map((a) => ({ loc: `/articles/${a.slug}`, freq: 'monthly', prio: '0.6', mod: a.datePublished ?? today })),
       ];
