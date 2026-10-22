@@ -10,6 +10,7 @@ const NAV = [
   { label: 'Что вы получаете', href: '#features' },
   { label: 'Отзывы', href: '#reviews' },
   { label: 'Статьи', href: '/blog' },
+  { label: 'Калькулятор единиц', href: '/spravochnik/kalkulyator-mmol-mgdl' },
   { label: 'Стоимость', href: '#pricing' },
   { label: 'Вопросы', href: '#feedback' },
   { label: 'FAQ', href: '/faq' },

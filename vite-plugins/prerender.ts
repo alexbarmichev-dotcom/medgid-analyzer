@@ -3,6 +3,7 @@ import path from 'path';
 import type { Plugin } from 'vite';
 import { ARTICLES } from '../src/data/articles';
 import { FAQ_GROUPS } from '../src/data/faq';
+import { CALC_DESC, CALC_FAQ, CALC_H1, CALC_LEAD, CALC_PATH, CALC_TITLE, COEF_ROWS, EXAMPLE_ROWS } from '../src/data/unitCalc';
 import { ABOUT_LEAD, ABOUT_SECTIONS } from '../src/data/about';
 
 const SITE = 'https://лаб-гид.рф';
@@ -45,7 +46,7 @@ const LD_BLOCK = /<script type="application\/ld\+json">[\s\S]*?<\/script>\s*/g;
 const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-const nav = `<header><a href="/">ЛабГид</a><nav><a href="/#how">Как это работает</a> <a href="/#pricing">Тарифы</a> <a href="/blog">Статьи</a> <a href="/about">О сервисе</a> <a href="/faq">Частые вопросы</a></nav></header>`;
+const nav = `<header><a href="/">ЛабГид</a><nav><a href="/#how">Как это работает</a> <a href="/#pricing">Тарифы</a> <a href="/blog">Статьи</a> <a href="/spravochnik/kalkulyator-mmol-mgdl">Калькулятор единиц</a> <a href="/about">О сервисе</a> <a href="/faq">Частые вопросы</a></nav></header>`;
 const footer = `<footer><p>ЛабГид — информационный сервис. Не ставит диагноз и не заменяет консультацию врача.</p></footer>`;
 
 const faqHtml = (withTitle: boolean) =>
@@ -151,6 +152,19 @@ const write = (dir: string, rel: string, content: string) => {
   fs.writeFileSync(file, content);
 };
 
+const calcBody = () => {
+  const tbl = (head: string[], rows: string[][]) =>
+    `<table><tr>${head.map((h) => `<th>${esc(h)}</th>`).join('')}</tr>${rows
+      .map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join('')}</tr>`)
+      .join('')}</table>`;
+  return `${nav}<main><h1>${esc(CALC_H1)}</h1><p>${esc(CALC_LEAD)}</p><h2>Коэффициенты перевода</h2>${tbl(
+    ['Показатель', 'ммоль/л → мг/дл', 'мг/дл → ммоль/л'],
+    COEF_ROWS
+  )}<h2>Примеры</h2>${tbl(['Показатель', 'ммоль/л', 'мг/дл'], EXAMPLE_ROWS)}<h2>Частые вопросы</h2>${CALC_FAQ.map(
+    ([q, a]) => `<p><b>${esc(q)}</b> ${esc(a)}</p>`
+  ).join('')}<p><a href="/#try">Загрузить бланк</a></p></main>${footer}`;
+};
+
 const faqEntities = () =>
   FAQ_GROUPS.flatMap((g) =>
     g.items.map((i) => ({
@@ -217,6 +231,35 @@ export default function prerender(): Plugin {
             { '@type': 'FAQPage', mainEntity: faqEntities() },
           ]
         )
+      );
+
+      write(
+        outDir,
+        CALC_PATH.slice(1),
+        withMeta(base, calcBody(), `${CALC_TITLE} — ЛабГид`, CALC_DESC, CALC_PATH, [
+          ORG,
+          breadcrumbs([
+            { name: 'Главная', path: '/' },
+            { name: 'Калькулятор единиц', path: CALC_PATH },
+          ]),
+          {
+            '@type': 'WebApplication',
+            name: 'Калькулятор единиц анализов',
+            url: `${SITE}${CALC_PATH}`,
+            applicationCategory: 'HealthApplication',
+            operatingSystem: 'Web',
+            inLanguage: 'ru',
+            offers: { '@type': 'Offer', price: '0', priceCurrency: 'RUB' },
+          },
+          {
+            '@type': 'FAQPage',
+            mainEntity: CALC_FAQ.map(([q, a]) => ({
+              '@type': 'Question',
+              name: q,
+              acceptedAnswer: { '@type': 'Answer', text: a },
+            })),
+          },
+        ])
       );
 
       write(
@@ -308,6 +351,7 @@ export default function prerender(): Plugin {
         { loc: '/faq', freq: 'monthly', prio: '0.8', mod: today },
         { loc: '/about', freq: 'monthly', prio: '0.7', mod: today },
         { loc: '/blog', freq: 'weekly', prio: '0.8', mod: latest },
+        { loc: CALC_PATH, freq: 'monthly', prio: '0.7', mod: today },
         ...ARTICLES.map((a) => ({ loc: `/articles/${a.slug}`, freq: 'monthly', prio: '0.6', mod: a.datePublished ?? today })),
       ];
       const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls
