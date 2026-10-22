@@ -10,6 +10,8 @@ export interface Article {
   coverWeb?: string;
   hideOnHome?: boolean;
   refSlugs?: string[];
+  oldSlugs?: string[];
+  subtitle?: string;
   paragraphs: string[];
 }
 
@@ -111,14 +113,16 @@ export const ARTICLES: Article[] = [
     ],
   },
   {
-    slug: 'lampochka-na-paneli',
+    slug: 'preddiabet-kak-uznat-po-analizam',
+    oldSlugs: ['lampochka-na-paneli'],
     refSlugs: ['glyukoza-norma', 'gemoglobin-norma'],
     coverWeb: '/articles/lampochka-na-paneli.webp',
     datePublished: '2026-10-20',
-    title: 'Лампочка на панели уже горит. Просто вы едете и не смотрите вниз',
+    title: 'Преддиабет: как узнать по анализам и какие цифры важны',
+    subtitle: 'Лампочка на панели уже горит. Просто вы едете и не смотрите вниз',
     excerpt:
       'Каждый водитель знает этот момент: на панели тлеет оранжевая лампочка, а вы решили, что она просто для красоты. Диабет второго типа устроен так же, и горит эта лампочка у большего числа людей, чем кажется.',
-    seoTitle: 'Преддиабет: лампочка на панели уже горит',
+    seoTitle: 'Преддиабет: как узнать по анализам и какие цифры важны',
     seoDescription:
       'Преддиабет не болит и не кричит, поэтому его легко не заметить. Цифры по миру и России, почему «почти норма» в бланке бывает у края и что с этим делать.',
     author: 'Алексей Кровный',
@@ -150,13 +154,15 @@ export const ARTICLES: Article[] = [
     ],
   },
   {
-    slug: 'kak-lyudi-nauchilis-chitat-analizy',
+    slug: 'istoriya-rasshifrovki-analizov',
+    oldSlugs: ['kak-lyudi-nauchilis-chitat-analizy'],
     coverWeb: '/articles/kak-lyudi-nauchilis-chitat-analizy.webp',
     datePublished: '2026-10-20',
-    title: 'Как люди научились читать анализы: от колбы с мочой до нейросети',
+    title: 'История расшифровки анализов: от колбы с мочой до нейросети',
+    subtitle: 'Как люди научились читать анализы',
     excerpt:
       'Скажу сразу: я не историк, я человек, который однажды получил бланк анализов и час просидел над ним, как над меню в китайском ресторане без картинок. Но когда я решил выяснить, откуда взялась привычка разглядывать содержимое человека и делать выводы, то обнаружил историю куда длиннее и смешнее, чем мой бланк.',
-    seoTitle: 'Как люди научились читать анализы: от колбы до нейросети',
+    seoTitle: 'История расшифровки анализов: от колбы до нейросети',
     seoDescription:
       'От колбы с мочой у средневекового врача до нейросети: как менялась расшифровка анализов, откуда взялась «норма» и почему 5% здоровых людей в неё не попадают.',
     author: 'Алексей Кровный',
@@ -193,11 +199,13 @@ export const ARTICLES: Article[] = [
     ],
   },
   {
-    slug: 'dvenadtsat-minut',
+    slug: 'podgotovka-k-priemu-vracha',
+    oldSlugs: ['dvenadtsat-minut'],
     datePublished: '2026-10-08',
     coverWeb: '/articles/dvenadtsat-minut.webp',
-    title: 'Приём у терапевта за 12 минут: как подготовиться к врачу',
-    seoTitle: 'Приём у терапевта за 12 минут: как подготовиться к врачу',
+    title: 'Подготовка к приёму врача: что успеть за 12 минут',
+    subtitle: 'Двенадцать минут',
+    seoTitle: 'Подготовка к приёму врача: что успеть за 12 минут',
     excerpt:
       'Я засекал. Двенадцать минут — столько длился мой приём у терапевта. За это время нельзя сварить приличное яйцо, но можно решить, как проживёт человек следующие тридцать лет.',
     seoDescription:
@@ -260,10 +268,12 @@ export const ARTICLES: Article[] = [
     ],
   },
   {
-    slug: 'mozhno-li-doverjat-onlajn-rasshifrovke-analizov',
+    slug: 'mozhno-li-doveryat-ii-rasshifrovke-analizov',
+    oldSlugs: ['mozhno-li-doverjat-onlajn-rasshifrovke-analizov'],
     coverWeb: '/articles/mozhno-li-doverjat.webp',
     datePublished: '2026-10-13',
-    title: 'Можно ли доверять онлайн-расшифровке анализов',
+    title: 'Можно ли доверять ИИ-расшифровке анализов',
+    seoTitle: 'Можно ли доверять ИИ-расшифровке анализов онлайн',
     excerpt:
       'Можно ли доверять нейросети, которая взялась расшифровывать мою кровь? Разбираемся без паники и без слепой веры: что ИИ-разбор анализов умеет, чего не умеет и почему подготовленный пациент получает от визита к врачу больше.',
     seoDescription:

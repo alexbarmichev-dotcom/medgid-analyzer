@@ -93,7 +93,7 @@ const aboutBody = () =>
 
 const articleBody = (slug: string) => {
   const a = ARTICLES.find((x) => x.slug === slug)!;
-  return `${nav}<main><article><h1>${esc(a.title)}</h1><p>Автор: ${esc(a.author)}</p>${a.paragraphs
+  return `${nav}<main><article><h1>${esc(a.title)}</h1>${a.subtitle ? `<p><em>${esc(a.subtitle)}</em></p>` : ''}<p>Автор: ${esc(a.author)}</p>${a.paragraphs
     .map((p) =>
       p.startsWith('| ')
         ? `<table>${p
@@ -376,6 +376,17 @@ export default function prerender(): Plugin {
       );
 
       ARTICLES.forEach((a) =>
+        (a.oldSlugs ?? []).forEach((old) => {
+          const to = `${SITE}/articles/${a.slug}`;
+          write(
+            outDir,
+            `articles/${old}`,
+            `<!doctype html>\n<html lang="ru"><head><meta charset="utf-8"><title>${esc(a.title)} — ЛабГид</title><meta name="robots" content="noindex, follow"><link rel="canonical" href="${to}"><meta http-equiv="refresh" content="0; url=/articles/${a.slug}"><script>location.replace('/articles/${a.slug}'+location.search+location.hash)</script></head><body><p>Статья переехала: <a href="/articles/${a.slug}">${esc(a.title)}</a></p></body></html>\n`
+          );
+        })
+      );
+
+      ARTICLES.forEach((a) =>
         write(
           outDir,
           `articles/${a.slug}`,
@@ -395,6 +406,7 @@ export default function prerender(): Plugin {
               {
                 '@type': 'Article',
                 headline: a.title,
+                ...(a.subtitle ? { alternativeHeadline: a.subtitle } : {}),
                 description: a.seoDescription ?? a.excerpt.slice(0, 160),
                 inLanguage: 'ru-RU',
                 url: `${SITE}/articles/${a.slug}`,

@@ -28,11 +28,11 @@
 ## Статьи
 - [Биохимический анализ крови: расшифровка показателей](https://лаб-гид.рф/articles/biokhimicheskiy-analiz-krovi-rasshifrovka)
 - [Расшифровка общего анализа крови: что означают все показатели](https://лаб-гид.рф/articles/rasshifrovka-obshchego-analiza-krovi)
-- [Лампочка на панели уже горит: про преддиабет](https://лаб-гид.рф/articles/lampochka-na-paneli)
-- [Как люди научились читать анализы: от колбы с мочой до нейросети](https://лаб-гид.рф/articles/kak-lyudi-nauchilis-chitat-analizy)
-- [Приём у терапевта за 12 минут: как подготовиться к врачу](https://лаб-гид.рф/articles/dvenadtsat-minut)
+- [Преддиабет: как узнать по анализам и какие цифры важны](https://лаб-гид.рф/articles/preddiabet-kak-uznat-po-analizam)
+- [История расшифровки анализов: от колбы с мочой до нейросети](https://лаб-гид.рф/articles/istoriya-rasshifrovki-analizov)
+- [Подготовка к приёму врача: что успеть за 12 минут](https://лаб-гид.рф/articles/podgotovka-k-priemu-vracha)
 - [Врач — не враг](https://лаб-гид.рф/articles/vrach-ne-vrag)
-- [Можно ли доверять онлайн-расшифровке анализов](https://лаб-гид.рф/articles/mozhno-li-doverjat-onlajn-rasshifrovke-analizov)
+- [Можно ли доверять ИИ-расшифровке анализов](https://лаб-гид.рф/articles/mozhno-li-doveryat-ii-rasshifrovke-analizov)
 
 ## Факты
 - Разбор одного анализа стоит 150 рублей, без подписок.

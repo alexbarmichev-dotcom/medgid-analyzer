@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import Header from '@/components/site/Header';
 import Footer from '@/components/site/Footer';
@@ -75,7 +75,8 @@ const renderParagraph = (p: string, i: number) => {
 const Article = () => {
   const { slug } = useParams();
   const article = ARTICLES.find((a) => a.slug === slug);
-  useNoindex(!article);
+  const moved = ARTICLES.find((a) => !!slug && a.oldSlugs?.includes(slug));
+  useNoindex(!article && !moved);
   const refPages = (article?.refSlugs ?? []).map((x) => getRefPage(x)).filter((x) => !!x);
   const idx = ARTICLES.findIndex((a) => a.slug === slug);
   const related =
@@ -95,6 +96,8 @@ const Article = () => {
       document.title = prevTitle;
     };
   }, [article]);
+
+  if (!article && moved) return <Navigate to={`/articles/${moved.slug}`} replace />;
 
   if (!article) {
     return (
@@ -130,6 +133,9 @@ const Article = () => {
           <h1 className="font-head text-3xl font-extrabold leading-tight tracking-[-0.03em] sm:text-4xl">
             {article.title}
           </h1>
+          {article.subtitle && (
+            <p className="mt-3 font-head text-lg italic text-muted-foreground sm:text-xl">{article.subtitle}</p>
+          )}
 
           {article.cover && (
             <img
