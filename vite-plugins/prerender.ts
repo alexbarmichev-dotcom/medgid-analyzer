@@ -5,6 +5,7 @@ import { ARTICLES } from '../src/data/articles';
 import { FAQ_GROUPS } from '../src/data/faq';
 import { CALC_DESC, CALC_FAQ, CALC_H1, CALC_LEAD, CALC_PATH, CALC_TITLE, COEF_ROWS, EXAMPLE_ROWS } from '../src/data/unitCalc';
 import { REF_BASE, REF_DISCLAIMER, REF_HUB_DESC, REF_HUB_H1, REF_HUB_LEAD, REF_HUB_TITLE, REF_PAGES, refPath } from '../src/data/reference';
+import { BRAND_ALIASES, BRAND_TEXT, BRAND_TITLE } from '../src/data/brand';
 import { ABOUT_LEAD, ABOUT_SECTIONS } from '../src/data/about';
 
 const SITE = 'https://лаб-гид.рф';
@@ -16,6 +17,7 @@ const ORG = {
   '@type': 'Organization',
   '@id': `${SITE}/#organization`,
   name: 'ЛабГид',
+  alternateName: BRAND_ALIASES,
   url: `${SITE}/`,
   logo: LOGO,
   description:
@@ -76,6 +78,7 @@ const homeBody = () =>
   ).join('')}</ul></section>
 ${faqHtml(true)}
 <p><a href="/faq">Все ответы на вопросы</a></p>
+<section id="brand-name"><h2>${esc(BRAND_TITLE)}</h2>${BRAND_TEXT.map((t) => `<p>${esc(t)}</p>`).join('')}</section>
 </main>${footer}`;
 
 const blogBody = () =>

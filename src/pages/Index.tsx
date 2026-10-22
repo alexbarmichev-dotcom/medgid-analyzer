@@ -11,6 +11,7 @@ import Features from '@/components/site/Features';
 import Reviews from '@/components/site/Reviews';
 import Articles from '@/components/site/Articles';
 import Security from '@/components/site/Security';
+import BrandName from '@/components/site/BrandName';
 import Disclaimer from '@/components/site/Disclaimer';
 import Pricing from '@/components/site/Pricing';
 import StartFlow from '@/components/site/StartFlow';
@@ -60,6 +61,7 @@ const Index = () => {
         <StartFlow />
         <Feedback />
         <Security />
+        <BrandName />
         <Disclaimer />
       </main>
       <Footer />
