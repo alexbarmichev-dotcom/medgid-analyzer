@@ -9,12 +9,14 @@ export interface Article {
   cover?: string;
   coverWeb?: string;
   hideOnHome?: boolean;
+  refSlugs?: string[];
   paragraphs: string[];
 }
 
 export const ARTICLES: Article[] = [
   {
     slug: 'biokhimicheskiy-analiz-krovi-rasshifrovka',
+    refSlugs: ['glyukoza-norma', 'kholesterin-norma', 'alt-norma', 'ast-norma', 'kreatinin-norma', 'bilirubin-norma'],
     hideOnHome: true,
     datePublished: '2026-10-20',
     title: 'Биохимический анализ крови: расшифровка показателей',
@@ -57,6 +59,7 @@ export const ARTICLES: Article[] = [
   },
   {
     slug: 'rasshifrovka-obshchego-analiza-krovi',
+    refSlugs: ['gemoglobin-norma', 'ferritin-norma'],
     hideOnHome: true,
     datePublished: '2026-10-20',
     title: 'Расшифровка общего анализа крови: что означают все показатели',
@@ -109,6 +112,7 @@ export const ARTICLES: Article[] = [
   },
   {
     slug: 'lampochka-na-paneli',
+    refSlugs: ['glyukoza-norma', 'gemoglobin-norma'],
     coverWeb: '/articles/lampochka-na-paneli.webp',
     datePublished: '2026-10-20',
     title: 'Лампочка на панели уже горит. Просто вы едете и не смотрите вниз',

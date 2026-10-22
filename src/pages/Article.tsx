@@ -4,6 +4,7 @@ import Icon from '@/components/ui/icon';
 import Header from '@/components/site/Header';
 import Footer from '@/components/site/Footer';
 import { ARTICLES } from '@/data/articles';
+import { REF_BASE, getRefPage, refPath } from '@/data/reference';
 import { useNoindex } from '@/hooks/useNoindex';
 
 const URL_RE = /(https?:\/\/[^\s,]+)/g;
@@ -75,6 +76,7 @@ const Article = () => {
   const { slug } = useParams();
   const article = ARTICLES.find((a) => a.slug === slug);
   useNoindex(!article);
+  const refPages = (article?.refSlugs ?? []).map((x) => getRefPage(x)).filter((x) => !!x);
   const idx = ARTICLES.findIndex((a) => a.slug === slug);
   const related =
     idx < 0
@@ -172,6 +174,28 @@ const Article = () => {
               </span>
             )}
           </p>
+
+          {refPages.length > 0 && (
+            <section className="mt-10 rounded-3xl border border-border bg-card p-6">
+              <h2 className="font-head text-lg font-bold">Нормы показателей из этой статьи</h2>
+              <p className="mt-2 text-sm text-ink-soft">
+                Таблицы референсных значений по полу и возрасту в{' '}
+                <Link to={REF_BASE} className="font-semibold text-accent hover:underline">справочнике</Link>:
+              </p>
+              <ul className="mt-4 flex flex-wrap gap-2">
+                {refPages.map((r) => (
+                  <li key={r!.slug}>
+                    <Link
+                      to={refPath(r!.slug)}
+                      className="inline-block rounded-full border border-border bg-background px-4 py-2 text-sm font-semibold text-accent hover:bg-accent/10"
+                    >
+                      {r!.short}: норма
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <div className="mt-12 overflow-hidden rounded-3xl bg-hand p-7 text-center text-accent-foreground shadow-lg md:p-10">
             <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-white/15">

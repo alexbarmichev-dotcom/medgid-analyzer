@@ -106,7 +106,15 @@ const articleBody = (slug: string) => {
           ? `<h2>${esc(p.slice(3))}</h2>`
           : `<p>${esc(p)}</p>`
     )
-    .join('')}<p><a href="/#try">Расшифровать свой анализ — 150 ₽</a></p><section><h2>Читайте также</h2><ul>${[1, 2, 3]
+    .join('')}<p><a href="/#try">Расшифровать свой анализ — 150 ₽</a></p>${
+    a.refSlugs?.length
+      ? `<section><h2>Нормы показателей из этой статьи</h2><ul>${a.refSlugs
+          .map((x) => REF_PAGES.find((r) => r.slug === x))
+          .filter(Boolean)
+          .map((r) => `<li><a href="${refPath(r!.slug)}">${esc(r!.seoTitle)}</a></li>`)
+          .join('')}</ul></section>`
+      : ''
+  }<section><h2>Читайте также</h2><ul>${[1, 2, 3]
     .map((n) => ARTICLES[(ARTICLES.indexOf(a) + n) % ARTICLES.length])
     .filter((r) => r.slug !== a.slug)
     .map((r) => `<li><a href="/articles/${r.slug}">${esc(r.title)}</a></li>`)
