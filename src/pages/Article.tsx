@@ -3,7 +3,7 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import Header from '@/components/site/Header';
 import Footer from '@/components/site/Footer';
-import { ARTICLES } from '@/data/articles';
+import { useArticle, useArticles } from '@/hooks/useArticles';
 import { REF_BASE, getRefPage, refPath } from '@/data/reference';
 import { useNoindex } from '@/hooks/useNoindex';
 
@@ -74,15 +74,17 @@ const renderParagraph = (p: string, i: number) => {
 
 const Article = () => {
   const { slug } = useParams();
-  const article = ARTICLES.find((a) => a.slug === slug);
-  const moved = ARTICLES.find((a) => !!slug && a.oldSlugs?.includes(slug));
-  useNoindex(!article && !moved);
+  const { data: loaded, isLoading } = useArticle(slug);
+  const { data: all = [] } = useArticles();
+  const article = loaded ?? undefined;
+  const moved = article && article.slug !== slug ? article : undefined;
+  useNoindex(!isLoading && !article);
   const refPages = (article?.refSlugs ?? []).map((x) => getRefPage(x)).filter((x) => !!x);
-  const idx = ARTICLES.findIndex((a) => a.slug === slug);
+  const idx = all.findIndex((a) => a.slug === article?.slug);
   const related =
     idx < 0
       ? []
-      : [1, 2, 3].map((n) => ARTICLES[(idx + n) % ARTICLES.length]).filter((a) => a.slug !== slug);
+      : [1, 2, 3].map((n) => all[(idx + n) % all.length]).filter((a) => a.slug !== article?.slug);
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -97,7 +99,20 @@ const Article = () => {
     };
   }, [article]);
 
-  if (!article && moved) return <Navigate to={`/articles/${moved.slug}`} replace />;
+  if (moved) return <Navigate to={`/articles/${moved.slug}`} replace />;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background font-body text-foreground">
+        <Header />
+        <main className="mx-auto max-w-3xl px-5 py-24 md:px-8">
+          <div className="h-10 w-3/4 animate-pulse rounded-xl bg-card" />
+          <div className="mt-8 aspect-[16/9] w-full animate-pulse rounded-3xl bg-card" />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   if (!article) {
     return (

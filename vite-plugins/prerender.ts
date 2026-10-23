@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import type { Plugin } from 'vite';
-import { ARTICLES } from '../src/data/articles';
+import type { Article } from '../src/data/articles';
 import { FAQ_GROUPS } from '../src/data/faq';
 import { CALC_DESC, CALC_FAQ, CALC_H1, CALC_LEAD, CALC_PATH, CALC_TITLE, COEF_ROWS, EXAMPLE_ROWS } from '../src/data/unitCalc';
 import { REF_BASE, REF_DISCLAIMER, REF_HUB_DESC, REF_HUB_H1, REF_HUB_LEAD, REF_HUB_TITLE, REF_PAGES, refPath } from '../src/data/reference';
@@ -9,6 +9,30 @@ import { BRAND_ALIASES, BRAND_TEXT, BRAND_TITLE } from '../src/data/brand';
 import { ABOUT_LEAD, ABOUT_SECTIONS } from '../src/data/about';
 
 const SITE = 'https://лаб-гид.рф';
+const ARTICLES_API = 'https://functions.poehali.dev/3880b1fb-4c27-45f0-9c29-db096014e097';
+let ARTICLES: Article[] = [];
+
+const loadArticles = async (): Promise<Article[]> => {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(`${ARTICLES_API}?full=1`);
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      const data = (await res.json()) as { items: Record<string, unknown>[] };
+      const items = data.items.map((a) => {
+        const out: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(a)) if (v !== null) out[k] = v;
+        return out as unknown as Article;
+      });
+      if (items.length === 0) throw new Error('empty articles list');
+      return items;
+    } catch (e) {
+      lastError = e;
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+  }
+  throw new Error(`Не удалось загрузить статьи из базы: ${String(lastError)}`);
+};
 const abs = (u: string) => (u.startsWith('/') ? `${SITE}${u}` : u);
 
 const LOGO =
@@ -239,7 +263,8 @@ export default function prerender(): Plugin {
     configResolved(cfg) {
       outDir = path.resolve(cfg.root, cfg.build.outDir);
     },
-    closeBundle() {
+    async closeBundle() {
+      ARTICLES = await loadArticles();
       const indexPath = path.join(outDir, 'index.html');
       if (!fs.existsSync(indexPath)) return;
       const base = fs.readFileSync(indexPath, 'utf-8');

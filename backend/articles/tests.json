@@ -1,0 +1,8 @@
+{
+  "tests": [
+    {"name": "options preflight", "method": "OPTIONS", "path": "/", "expectedStatus": 200},
+    {"name": "list articles", "method": "GET", "path": "/", "expectedStatus": 200, "expectedBody": {"items": []}, "bodyMatcher": "partial"},
+    {"name": "unknown article", "method": "GET", "path": "/?slug=net-takoj-stati", "expectedStatus": 404},
+    {"name": "post not allowed", "method": "POST", "path": "/", "body": {}, "expectedStatus": 405}
+  ]
+}
