@@ -26,6 +26,7 @@
 - [Частые вопросы](https://лаб-гид.рф/faq): стоимость, оплата, какие анализы принимаются, хранение данных
 
 ## Статьи
+- [ИИ-консультанты по здоровью в мире: как расшифровка анализов стала обычным делом](https://лаб-гид.рф/articles/ai-konsultanty-po-zdorovyu-v-mire)
 - [Биохимический анализ крови: расшифровка показателей](https://лаб-гид.рф/articles/biokhimicheskiy-analiz-krovi-rasshifrovka)
 - [Расшифровка общего анализа крови: что означают все показатели](https://лаб-гид.рф/articles/rasshifrovka-obshchego-analiza-krovi)
 - [Преддиабет: как узнать по анализам и какие цифры важны](https://лаб-гид.рф/articles/preddiabet-kak-uznat-po-analizam)

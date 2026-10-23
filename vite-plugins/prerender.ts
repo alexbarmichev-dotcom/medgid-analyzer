@@ -9,6 +9,7 @@ import { BRAND_ALIASES, BRAND_TEXT, BRAND_TITLE } from '../src/data/brand';
 import { ABOUT_LEAD, ABOUT_SECTIONS } from '../src/data/about';
 
 const SITE = 'https://лаб-гид.рф';
+const abs = (u: string) => (u.startsWith('/') ? `${SITE}${u}` : u);
 
 const LOGO =
   'https://cdn.poehali.dev/projects/a50bf440-39eb-48cd-8c9b-26529e75ba50/bucket/4f83188a-9df1-4eba-ac26-2ef05362e375.jpg';
@@ -414,14 +415,14 @@ export default function prerender(): Plugin {
                 inLanguage: 'ru-RU',
                 url: `${SITE}/articles/${a.slug}`,
                 mainEntityOfPage: `${SITE}/articles/${a.slug}`,
-                image: a.cover ? [a.cover] : [LOGO],
+                image: a.cover ? [abs(a.cover)] : [LOGO],
                 author: { '@type': 'Person', name: a.author },
                 publisher: { '@id': `${SITE}/#organization` },
                 ...(a.datePublished ? { datePublished: a.datePublished } : {}),
                 dateModified: a.datePublished ?? '2026-10-08',
               },
             ],
-            a.cover
+            a.cover ? abs(a.cover) : undefined
           )
         )
       );
