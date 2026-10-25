@@ -119,6 +119,24 @@ const aboutBody = () =>
     (x) => `<section><h2>${esc(x.title)}</h2>${x.paragraphs.map((p) => `<p>${esc(p)}</p>`).join('')}</section>`
   ).join('')}</main>${footer}`;
 
+const articleFaq = (a: Article) => {
+  const start = a.paragraphs.findIndex((p) => p.startsWith('## ') && /частые вопросы/i.test(p));
+  if (start < 0) return [];
+  const items: { '@type': 'Question'; name: string; acceptedAnswer: { '@type': 'Answer'; text: string } }[] = [];
+  const rest = a.paragraphs.slice(start + 1);
+  for (let i = 0; i < rest.length; i++) {
+    if (rest[i].startsWith('## ')) break;
+    if (rest[i].startsWith('### ') && rest[i + 1] && !rest[i + 1].startsWith('#')) {
+      items.push({
+        '@type': 'Question',
+        name: rest[i].slice(4),
+        acceptedAnswer: { '@type': 'Answer', text: rest[i + 1] },
+      });
+    }
+  }
+  return items.length ? [{ '@type': 'FAQPage', mainEntity: items }] : [];
+};
+
 const articleBody = (slug: string) => {
   const a = ARTICLES.find((x) => x.slug === slug)!;
   return `${nav}<main><article><h1>${esc(a.title)}</h1>${a.subtitle ? `<p><em>${esc(a.subtitle)}</em></p>` : ''}<p>Автор: ${esc(a.author)}</p>${a.paragraphs
@@ -446,6 +464,7 @@ export default function prerender(): Plugin {
                 ...(a.datePublished ? { datePublished: a.datePublished } : {}),
                 dateModified: a.datePublished ?? '2026-10-08',
               },
+              ...articleFaq(a),
             ],
             a.cover ? abs(a.cover) : undefined
           )
