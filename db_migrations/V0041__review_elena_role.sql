@@ -1,0 +1,1 @@
+UPDATE reviews SET role = 'Биохимия и гормоны' WHERE author = 'Елена, 48 лет';
