@@ -8,6 +8,8 @@ import { REF_BASE, REF_DISCLAIMER, REF_PAGES, getRefPage, refPath } from '@/data
 import { REF_MORE } from '@/data/referenceMore';
 import { CALC_PATH } from '@/data/unitCalc';
 import { useNoindex } from '@/hooks/useNoindex';
+import { useArticles } from '@/hooks/useArticles';
+import { relatedArticles } from '@/lib/relatedArticles';
 import NotFound from './NotFound';
 
 const List = ({ title, items }: { title: string; items: string[] }) => (
@@ -24,6 +26,7 @@ const List = ({ title, items }: { title: string; items: string[] }) => (
 const ReferencePage = () => {
   const { slug } = useParams();
   const page = getRefPage(slug);
+  const { data: articles = [] } = useArticles();
   useNoindex(!page);
 
   useEffect(() => {
@@ -43,6 +46,7 @@ const ReferencePage = () => {
   if (!page) return <NotFound />;
   const others = REF_PAGES.filter((p) => p.slug !== page.slug);
   const more = REF_MORE[page.slug];
+  const related = relatedArticles(articles, page.slug);
 
   return (
     <div className="min-h-screen bg-background font-body text-foreground">
@@ -140,6 +144,25 @@ const ReferencePage = () => {
               <Icon name="ArrowRight" size={16} />
             </Link>
           </aside>
+
+          {related.length > 0 && (
+            <section>
+              <h2 className="mt-10 font-head text-2xl font-extrabold">Читайте в блоге</h2>
+              <ul className="mt-4 space-y-3">
+                {related.map((a) => (
+                  <li key={a.slug}>
+                    <Link
+                      to={`/articles/${a.slug}`}
+                      className="flex items-start justify-between gap-3 rounded-2xl border border-border bg-card px-5 py-4 font-semibold leading-snug text-foreground transition-colors hover:border-accent/40 hover:text-accent"
+                    >
+                      {a.title}
+                      <Icon name="ArrowRight" size={18} className="mt-0.5 shrink-0 text-accent" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <h2 className="mt-10 font-head text-xl font-bold">Другие нормы</h2>
           <ul className="mt-4 flex flex-wrap gap-2">

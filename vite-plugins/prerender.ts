@@ -3,6 +3,7 @@ import path from 'path';
 import type { Plugin } from 'vite';
 import type { Article } from '../src/data/articles';
 import { FAQ_GROUPS } from '../src/data/faq';
+import { relatedArticles } from '../src/lib/relatedArticles';
 import { REF_MORE } from '../src/data/referenceMore';
 import { CALC_DESC, CALC_FAQ, CALC_H1, CALC_LEAD, CALC_PATH, CALC_TITLE, COEF_ROWS, EXAMPLE_ROWS } from '../src/data/unitCalc';
 import { REF_BASE, REF_DISCLAIMER, REF_HUB_DESC, REF_HUB_H1, REF_HUB_LEAD, REF_HUB_TITLE, REF_PAGES, refPath } from '../src/data/reference';
@@ -246,7 +247,12 @@ const refPageBody = (p: (typeof REF_PAGES)[number]) => {
       : ''
   }<h2>Как подготовиться к анализу</h2><p>${esc(p.prep)}</p><h2>Частые вопросы</h2>${p.faq
     .map(([q, a]) => `<p><b>${esc(q)}</b> ${esc(a)}</p>`)
-    .join('')}<p><a href="/#try">Расшифровать свой анализ — 150 ₽</a></p><p>${REF_PAGES.filter((x) => x.slug !== p.slug)
+    .join('')}<p><a href="/#try">Расшифровать свой анализ — 150 ₽</a></p>${(() => {
+    const rel = relatedArticles(ARTICLES, p.slug);
+    return rel.length
+      ? `<h2>Читайте в блоге</h2><ul>${rel.map((a) => `<li><a href="/articles/${a.slug}">${esc(a.title)}</a></li>`).join('')}</ul>`
+      : '';
+  })()}<p>${REF_PAGES.filter((x) => x.slug !== p.slug)
     .map((x) => `<a href="${refPath(x.slug)}">${esc(x.short)}</a>`)
     .join(' ')}</p><p>${esc(REF_DISCLAIMER)}</p></main>${footer}`;
 };
