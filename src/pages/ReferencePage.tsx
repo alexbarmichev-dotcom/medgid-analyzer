@@ -5,6 +5,7 @@ import Header from '@/components/site/Header';
 import Footer from '@/components/site/Footer';
 import RefTableView from '@/components/site/RefTableView';
 import { REF_BASE, REF_DISCLAIMER, REF_PAGES, getRefPage, refPath } from '@/data/reference';
+import { REF_MORE } from '@/data/referenceMore';
 import { CALC_PATH } from '@/data/unitCalc';
 import { useNoindex } from '@/hooks/useNoindex';
 import NotFound from './NotFound';
@@ -41,6 +42,7 @@ const ReferencePage = () => {
 
   if (!page) return <NotFound />;
   const others = REF_PAGES.filter((p) => p.slug !== page.slug);
+  const more = REF_MORE[page.slug];
 
   return (
     <div className="min-h-screen bg-background font-body text-foreground">
@@ -58,6 +60,17 @@ const ReferencePage = () => {
             {page.h1}
           </h1>
           <p className="mt-4 leading-relaxed text-ink-soft">{page.lead}</p>
+
+          {more && (
+            <section>
+              <h2 className="mt-10 font-head text-2xl font-extrabold">Что показывает анализ</h2>
+              <div className="mt-4 space-y-4 leading-relaxed text-ink-soft">
+                {more.about.map((t) => (
+                  <p key={t}>{t}</p>
+                ))}
+              </div>
+            </section>
+          )}
 
           {page.tables.map((t) => (
             <section key={t.title}>
@@ -80,6 +93,28 @@ const ReferencePage = () => {
 
           {page.low && <List title={page.low.title} items={page.low.items} />}
           <List title={page.high.title} items={page.high.items} />
+
+          {more && (
+            <>
+              <h2 className="mt-10 font-head text-2xl font-extrabold">Почему показатель повышен</h2>
+              <div className="mt-4 space-y-4 leading-relaxed text-ink-soft">
+                {more.highWhy.map((t) => (
+                  <p key={t}>{t}</p>
+                ))}
+              </div>
+              <h2 className="mt-10 font-head text-2xl font-extrabold">Почему показатель понижен</h2>
+              <div className="mt-4 space-y-4 leading-relaxed text-ink-soft">
+                {more.lowWhy.map((t) => (
+                  <p key={t}>{t}</p>
+                ))}
+              </div>
+              <List title="Что делать при отклонении от нормы" items={more.actions} />
+              <h2 className="mt-10 font-head text-2xl font-extrabold">Что влияет на результат</h2>
+              <p className="mt-4 leading-relaxed text-ink-soft">{more.factors}</p>
+              <h2 className="mt-10 font-head text-2xl font-extrabold">Когда обратиться к врачу</h2>
+              <p className="mt-4 leading-relaxed text-ink-soft">{more.doctor}</p>
+            </>
+          )}
 
           <h2 className="mt-10 font-head text-2xl font-extrabold">Как подготовиться к анализу</h2>
           <p className="mt-4 leading-relaxed text-ink-soft">{page.prep}</p>

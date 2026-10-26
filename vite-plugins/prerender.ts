@@ -3,6 +3,7 @@ import path from 'path';
 import type { Plugin } from 'vite';
 import type { Article } from '../src/data/articles';
 import { FAQ_GROUPS } from '../src/data/faq';
+import { REF_MORE } from '../src/data/referenceMore';
 import { CALC_DESC, CALC_FAQ, CALC_H1, CALC_LEAD, CALC_PATH, CALC_TITLE, COEF_ROWS, EXAMPLE_ROWS } from '../src/data/unitCalc';
 import { REF_BASE, REF_DISCLAIMER, REF_HUB_DESC, REF_HUB_H1, REF_HUB_LEAD, REF_HUB_TITLE, REF_PAGES, refPath } from '../src/data/reference';
 import { BRAND_ALIASES, BRAND_TEXT, BRAND_TITLE } from '../src/data/brand';
@@ -232,16 +233,23 @@ const refHubBody = () =>
     (p) => `<li><a href="${refPath(p.slug)}">${esc(p.seoTitle)}</a></li>`
   ).join('')}<li><a href="${CALC_PATH}">Калькулятор единиц анализов</a></li></ul><p>${esc(REF_DISCLAIMER)}</p></main>${footer}`;
 
-const refPageBody = (p: (typeof REF_PAGES)[number]) =>
-  `${nav}<main><h1>${esc(p.h1)}</h1><p>${esc(p.lead)}</p>${p.tables
+const refPageBody = (p: (typeof REF_PAGES)[number]) => {
+  const m = REF_MORE[p.slug];
+  const paras = (a: string[]) => a.map((t) => `<p>${esc(t)}</p>`).join('');
+  return `${nav}<main><h1>${esc(p.h1)}</h1><p>${esc(p.lead)}</p>${m ? `<h2>Что показывает анализ</h2>${paras(m.about)}` : ''}${p.tables
     .map((t) => `<h2>${esc(t.title)}</h2>${refTbl(t.head, t.rows)}`)
     .join('')}${p.calc ? `<p><a href="${CALC_PATH}">Перевести единицы в калькуляторе</a></p>` : ''}${
     p.low ? refList(p.low.title, p.low.items) : ''
-  }${refList(p.high.title, p.high.items)}<h2>Как подготовиться к анализу</h2><p>${esc(p.prep)}</p><h2>Частые вопросы</h2>${p.faq
+  }${refList(p.high.title, p.high.items)}${
+    m
+      ? `<h2>Почему показатель повышен</h2>${paras(m.highWhy)}<h2>Почему показатель понижен</h2>${paras(m.lowWhy)}${refList('Что делать при отклонении от нормы', m.actions)}<h2>Что влияет на результат</h2><p>${esc(m.factors)}</p><h2>Когда обратиться к врачу</h2><p>${esc(m.doctor)}</p>`
+      : ''
+  }<h2>Как подготовиться к анализу</h2><p>${esc(p.prep)}</p><h2>Частые вопросы</h2>${p.faq
     .map(([q, a]) => `<p><b>${esc(q)}</b> ${esc(a)}</p>`)
     .join('')}<p><a href="/#try">Расшифровать свой анализ — 150 ₽</a></p><p>${REF_PAGES.filter((x) => x.slug !== p.slug)
     .map((x) => `<a href="${refPath(x.slug)}">${esc(x.short)}</a>`)
     .join(' ')}</p><p>${esc(REF_DISCLAIMER)}</p></main>${footer}`;
+};
 
 const faqEntities = () =>
   FAQ_GROUPS.flatMap((g) =>
