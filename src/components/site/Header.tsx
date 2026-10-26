@@ -11,6 +11,7 @@ const NAV = [
   { label: 'Отзывы', href: '#reviews' },
   { label: 'Статьи', href: '/blog' },
   { label: 'Справочник', href: '/spravochnik' },
+  { label: 'Калькулятор', href: '/spravochnik/kalkulyator-mmol-mgdl' },
   { label: 'Стоимость', href: '#pricing' },
   { label: 'Вопросы', href: '#feedback' },
   { label: 'FAQ', href: '/faq' },
@@ -67,7 +68,7 @@ const Header = () => {
           <Logo />
         </button>
 
-        <nav className="hidden items-center gap-5 pl-6 xl:gap-7 lg:flex">
+        <nav className="hidden items-center gap-4 pl-4 2xl:gap-7 xl:flex">
           {NAV.map((n) => (
             <button
               key={n.href}
@@ -77,7 +78,7 @@ const Header = () => {
               {n.label}
             </button>
           ))}
-          <InstallAppButton className="inline-flex items-center gap-2 rounded-[var(--radius)] border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted" />
+          <InstallAppButton className="hidden items-center gap-2 rounded-[var(--radius)] border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted 2xl:inline-flex" />
           <button
             onClick={startFree}
             className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-[var(--radius)] bg-hand px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:-translate-y-0.5"
@@ -88,7 +89,7 @@ const Header = () => {
         </nav>
 
         <button
-          className="grid h-10 w-10 place-items-center rounded-xl border border-border text-foreground lg:hidden"
+          className="grid h-10 w-10 place-items-center rounded-xl border border-border text-foreground xl:hidden"
           onClick={() => setOpen((v) => !v)}
           aria-label="Меню"
         >
@@ -97,7 +98,7 @@ const Header = () => {
       </div>
 
       {open && (
-        <div className="animate-fade-in border-t border-border bg-card px-5 py-4 lg:hidden">
+        <div className="animate-fade-in border-t border-border bg-card px-5 py-4 xl:hidden">
           <nav className="flex flex-col gap-1">
             {NAV.map((n) => (
               <button
