@@ -1,11 +1,13 @@
 import { useEffect } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from "@/lib/router-compat";
 import Icon from '@/components/ui/icon';
 import Header from '@/components/site/Header';
 import Footer from '@/components/site/Footer';
 import { useArticle, useArticles } from '@/hooks/useArticles';
 import { REF_BASE, getRefPage, refPath } from '@/data/reference';
 import { useNoindex } from '@/hooks/useNoindex';
+import type { ArticleFull } from '@/lib/articlesApi';
+import type { Article as ArticleItem } from '@/data/articles';
 
 const URL_RE = /(https?:\/\/[^\s,]+)/g;
 
@@ -72,10 +74,16 @@ const renderParagraph = (p: string, i: number) => {
   return <p key={i}>{renderWithLinks(p)}</p>;
 };
 
-const Article = () => {
+const Article = ({
+  initialArticle,
+  initialArticles,
+}: {
+  initialArticle?: ArticleFull | null;
+  initialArticles?: ArticleItem[];
+}) => {
   const { slug } = useParams();
-  const { data: loaded, isLoading } = useArticle(slug);
-  const { data: all = [] } = useArticles();
+  const { data: loaded, isLoading } = useArticle(slug, initialArticle);
+  const { data: all = [] } = useArticles(initialArticles);
   const article = loaded ?? undefined;
   const moved = article && article.slug !== slug ? article : undefined;
   useNoindex(!isLoading && !article);
@@ -90,14 +98,6 @@ const Article = () => {
     window.scrollTo({ top: 0 });
   }, [slug]);
 
-  useEffect(() => {
-    if (!article) return;
-    const prevTitle = document.title;
-    document.title = `${article.title} — ЛабГид`;
-    return () => {
-      document.title = prevTitle;
-    };
-  }, [article]);
 
   if (moved) return <Navigate to={`/articles/${moved.slug}`} replace />;
 

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams } from "@/lib/router-compat";
 import Icon from '@/components/ui/icon';
 import Header from '@/components/site/Header';
 import Footer from '@/components/site/Footer';
@@ -11,6 +11,7 @@ import { useNoindex } from '@/hooks/useNoindex';
 import { useArticles } from '@/hooks/useArticles';
 import { relatedArticles } from '@/lib/relatedArticles';
 import NotFound from './NotFound';
+import type { Article } from '@/data/articles';
 
 const List = ({ title, items }: { title: string; items: string[] }) => (
   <>
@@ -23,24 +24,15 @@ const List = ({ title, items }: { title: string; items: string[] }) => (
   </>
 );
 
-const ReferencePage = () => {
+const ReferencePage = ({ initialArticles }: { initialArticles?: Article[] }) => {
   const { slug } = useParams();
   const page = getRefPage(slug);
-  const { data: articles = [] } = useArticles();
+  const { data: articles = [] } = useArticles(initialArticles);
   useNoindex(!page);
 
   useEffect(() => {
     if (!page) return;
-    const prevTitle = document.title;
-    document.title = `${page.seoTitle} — ЛабГид`;
-    const meta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
-    const prevDesc = meta?.content ?? '';
-    if (meta) meta.content = page.description;
     window.scrollTo({ top: 0 });
-    return () => {
-      document.title = prevTitle;
-      if (meta) meta.content = prevDesc;
-    };
   }, [page]);
 
   if (!page) return <NotFound />;

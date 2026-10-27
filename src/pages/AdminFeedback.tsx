@@ -55,7 +55,7 @@ interface FeedbackItem {
 }
 
 const AdminFeedback = () => {
-  const [password, setPassword] = useState(() => sessionStorage.getItem('medgid_admin_pwd') || '');
+  const [password, setPassword] = useState('');
   const [authorized, setAuthorized] = useState(false);
   const [checking, setChecking] = useState(false);
   const [items, setItems] = useState<FeedbackItem[]>([]);
@@ -96,9 +96,11 @@ const AdminFeedback = () => {
   };
 
   useEffect(() => {
-    if (password) {
+    const stored = sessionStorage.getItem('medgid_admin_pwd') || '';
+    if (stored) {
+      setPassword(stored);
       setChecking(true);
-      load(password);
+      load(stored);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

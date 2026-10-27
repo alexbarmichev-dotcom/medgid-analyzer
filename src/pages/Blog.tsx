@@ -1,26 +1,15 @@
 import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from "@/lib/router-compat";
 import Header from '@/components/site/Header';
 import Footer from '@/components/site/Footer';
 import ArticleCard from '@/components/site/ArticleCard';
 import { useArticles } from '@/hooks/useArticles';
+import type { Article } from '@/data/articles';
 
-const Blog = () => {
-  const { data: articles = [], isLoading } = useArticles();
+const Blog = ({ initialArticles }: { initialArticles?: Article[] }) => {
+  const { data: articles = [], isLoading } = useArticles(initialArticles);
   useEffect(() => {
     window.scrollTo({ top: 0 });
-    const prevTitle = document.title;
-    document.title = 'Блог о здоровье и анализах — ЛабГид';
-    const meta = document.querySelector('meta[name="description"]');
-    const prevDescription = meta?.getAttribute('content') || '';
-    meta?.setAttribute(
-      'content',
-      'Статьи о здоровье, лабораторных анализах и разговоре с врачом: простым языком о том, как понимать свои результаты.'
-    );
-    return () => {
-      document.title = prevTitle;
-      meta?.setAttribute('content', prevDescription);
-    };
   }, []);
 
   return (

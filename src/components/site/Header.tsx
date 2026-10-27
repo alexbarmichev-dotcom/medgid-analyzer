@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from "@/lib/router-compat";
 import Icon from '@/components/ui/icon';
 import Logo from './Logo';
 import InstallAppButton from './InstallAppButton';

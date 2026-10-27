@@ -51,7 +51,7 @@ const SUB_LABEL: Record<string, string> = {
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString('ru-RU') : '—');
 
 const AdminSubscriptions = () => {
-  const [password, setPassword] = useState(() => sessionStorage.getItem('medgid_admin_pwd') || '');
+  const [password, setPassword] = useState('');
   const [authorized, setAuthorized] = useState(false);
   const [checking, setChecking] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -98,7 +98,11 @@ const AdminSubscriptions = () => {
   };
 
   useEffect(() => {
-    if (password) tryAuth(password);
+    const stored = sessionStorage.getItem('medgid_admin_pwd') || '';
+    if (stored) {
+      setPassword(stored);
+      tryAuth(stored);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -1,19 +1,11 @@
 import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from "@/lib/router-compat";
 import Icon from '@/components/ui/icon';
 import Header from '@/components/site/Header';
 import Footer from '@/components/site/Footer';
 import { ABOUT_LEAD, ABOUT_SECTIONS, ABOUT_TITLE } from '@/data/about';
 
 const About = () => {
-  useEffect(() => {
-    const prevTitle = document.title;
-    document.title = `${ABOUT_TITLE} — расшифровка анализов онлайн`;
-    return () => {
-      document.title = prevTitle;
-    };
-  }, []);
-
   return (
     <div className="min-h-screen bg-background font-body text-foreground">
       <Header />

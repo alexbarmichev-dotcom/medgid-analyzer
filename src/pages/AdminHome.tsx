@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from "@/lib/router-compat";
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,7 +35,7 @@ const SECTIONS = [
 ];
 
 const AdminHome = () => {
-  const [password, setPassword] = useState(() => sessionStorage.getItem('medgid_admin_pwd') || '');
+  const [password, setPassword] = useState('');
   const [authorized, setAuthorized] = useState(false);
   const [checking, setChecking] = useState(false);
   const navigate = useNavigate();
@@ -67,9 +67,14 @@ const AdminHome = () => {
     }
   };
 
-  useState(() => {
-    if (password) tryAuth(password);
-  });
+  useEffect(() => {
+    const stored = sessionStorage.getItem('medgid_admin_pwd') || '';
+    if (stored) {
+      setPassword(stored);
+      tryAuth(stored);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (!authorized) {
     return (

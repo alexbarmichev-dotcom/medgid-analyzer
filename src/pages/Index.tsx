@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from "@/lib/router-compat";
 import { emitStartIntent } from '@/lib/startFlowBus';
 import { ANALYZE_URL } from '@/components/site/start-flow/uploadClient';
 import Header from '@/components/site/Header';
@@ -17,8 +17,9 @@ import Pricing from '@/components/site/Pricing';
 import StartFlow from '@/components/site/StartFlow';
 import Feedback from '@/components/site/Feedback';
 import Footer from '@/components/site/Footer';
+import type { Article } from '@/data/articles';
 
-const Index = () => {
+const Index = ({ articles }: { articles?: Article[] }) => {
   const { hash } = useLocation();
 
   useEffect(() => {
@@ -56,7 +57,7 @@ const Index = () => {
         <HowItWorks />
         <Features />
         <Reviews />
-        <Articles />
+        <Articles initialArticles={articles} />
         <Pricing />
         <StartFlow />
         <Feedback />

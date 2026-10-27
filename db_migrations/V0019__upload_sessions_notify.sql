@@ -1,2 +1,0 @@
-ALTER TABLE upload_sessions ADD COLUMN IF NOT EXISTS site_url TEXT;
-ALTER TABLE upload_sessions ADD COLUMN IF NOT EXISTS notified_at TIMESTAMP;

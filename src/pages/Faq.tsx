@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from "@/lib/router-compat";
 import Icon from '@/components/ui/icon';
 import Header from '@/components/site/Header';
 import Footer from '@/components/site/Footer';
@@ -12,23 +12,6 @@ import {
 import { FAQ_GROUPS } from '@/data/faq';
 
 const Faq = () => {
-  useEffect(() => {
-    const prevTitle = document.title;
-    document.title = 'Частые вопросы о расшифровке анализов — ЛабГид';
-
-    const metaDescription = document.querySelector('meta[name="description"]');
-    const prevDescription = metaDescription?.getAttribute('content') || '';
-    metaDescription?.setAttribute(
-      'content',
-      'Ответы на частые вопросы о сервисе ЛабГид: как расшифровать анализы онлайн, сколько это стоит, какие данные учитываются и как обеспечивается безопасность.'
-    );
-
-    return () => {
-      document.title = prevTitle;
-      metaDescription?.setAttribute('content', prevDescription);
-    };
-  }, []);
-
   return (
     <div className="min-h-screen bg-background font-body text-foreground">
       <Header />

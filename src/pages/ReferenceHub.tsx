@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from "@/lib/router-compat";
 import Icon from '@/components/ui/icon';
 import Header from '@/components/site/Header';
 import Footer from '@/components/site/Footer';
@@ -19,16 +19,7 @@ const cardCls =
 
 const ReferenceHub = () => {
   useEffect(() => {
-    const prevTitle = document.title;
-    document.title = `${REF_HUB_TITLE} — ЛабГид`;
-    const meta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
-    const prevDesc = meta?.content ?? '';
-    if (meta) meta.content = REF_HUB_DESC;
     window.scrollTo({ top: 0 });
-    return () => {
-      document.title = prevTitle;
-      if (meta) meta.content = prevDesc;
-    };
   }, []);
 
   return (

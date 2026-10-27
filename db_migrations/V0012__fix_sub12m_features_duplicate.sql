@@ -1,1 +1,0 @@
-UPDATE tariffs SET features = '["Всё из тарифа \"3 месяца\"", "Личный защищённый AI-чат"]'::jsonb WHERE id = 'sub_12m';

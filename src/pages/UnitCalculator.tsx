@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from "@/lib/router-compat";
 import Header from '@/components/site/Header';
 import Footer from '@/components/site/Footer';
 import {
@@ -46,16 +46,7 @@ const UnitCalculator = () => {
   const [value, setValue] = useState('');
 
   useEffect(() => {
-    const prevTitle = document.title;
-    document.title = `${CALC_TITLE} — ЛабГид`;
-    const meta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
-    const prevDesc = meta?.content ?? '';
-    if (meta) meta.content = CALC_DESC;
     window.scrollTo({ top: 0 });
-    return () => {
-      document.title = prevTitle;
-      if (meta) meta.content = prevDesc;
-    };
   }, []);
 
   const x = INDICATORS[idx];

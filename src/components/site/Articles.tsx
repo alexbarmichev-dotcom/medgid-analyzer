@@ -1,10 +1,11 @@
-import { Link } from 'react-router-dom';
+import { Link } from "@/lib/router-compat";
 import Icon from '@/components/ui/icon';
 import { useArticles } from '@/hooks/useArticles';
 import ArticleCard from '@/components/site/ArticleCard';
+import type { Article } from '@/data/articles';
 
-const Articles = () => {
-  const { data: articles = [] } = useArticles();
+const Articles = ({ initialArticles }: { initialArticles?: Article[] }) => {
+  const { data: articles = [] } = useArticles(initialArticles);
   return (
     <section id="articles" className="relative scroll-mt-20 bg-card">
       <div className="mx-auto max-w-7xl px-5 py-20 md:px-8">

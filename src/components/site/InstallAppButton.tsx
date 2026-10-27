@@ -65,9 +65,12 @@ const InstallAppButton = ({ className = '', onDone }: InstallAppButtonProps) => 
   const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
   const [help, setHelp] = useState(false);
+  const [device, setDevice] = useState<DeviceKey>('desktop');
 
   useEffect(() => {
     setInstalled(isStandalone());
+    const ua = navigator.userAgent;
+    setDevice(/iPhone|iPad|iPod/.test(ua) ? 'ios' : /Android/.test(ua) ? 'android' : 'desktop');
     const onPrompt = (e: Event) => {
       e.preventDefault();
       setPromptEvent(e as BeforeInstallPromptEvent);
@@ -86,12 +89,6 @@ const InstallAppButton = ({ className = '', onDone }: InstallAppButtonProps) => 
 
   if (installed) return null;
 
-  const ua = navigator.userAgent;
-  const device: DeviceKey = /iPhone|iPad|iPod/.test(ua)
-    ? 'ios'
-    : /Android/.test(ua)
-      ? 'android'
-      : 'desktop';
   const sections = [...GUIDES].sort((a, b) => Number(b.key === device) - Number(a.key === device));
 
   const handleClick = async () => {
