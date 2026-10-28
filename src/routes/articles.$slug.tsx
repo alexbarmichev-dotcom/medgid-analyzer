@@ -2,6 +2,7 @@ import { createFileRoute, notFound, redirect } from '@tanstack/react-router';
 import Article from '@/pages/Article';
 import { fetchArticle, fetchArticles } from '@/lib/articlesApi';
 import { pageHead } from '@/lib/seo';
+import { articleLdScripts } from '@/lib/articleLd';
 
 export const Route = createFileRoute('/articles/$slug')({
   loader: async ({ params }) => {
@@ -24,7 +25,7 @@ export const Route = createFileRoute('/articles/$slug')({
     });
     const cover = a?.coverWeb ?? a?.cover;
     if (cover) head.meta.push({ property: 'og:image', content: cover });
-    return head;
+    return { ...head, scripts: a ? articleLdScripts(a, `/articles/${params.slug}`) : [] };
   },
   component: ArticleRoute,
 });
