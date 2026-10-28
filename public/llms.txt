@@ -26,6 +26,8 @@
 - [Частые вопросы](https://лаб-гид.рф/faq): стоимость, оплата, какие анализы принимаются, хранение данных
 
 ## Статьи
+- [Сколько всего параметров в крови человека и почему врач проверяет не все](https://лаб-гид.рф/articles/skolko-parametrov-v-krovi-pochemu-issleduyut-ne-vse)
+- [Биохимический анализ крови: история, нормы и современная расшифровка](https://лаб-гид.рф/articles/biohimicheskij-analiz-krovi-istoriya-normy-rasshifrovka)
 - [ИИ-писарь у врача: почему врач смотрит в монитор и что с этим делает нейросеть](https://лаб-гид.рф/articles/ii-pisar-vracha-kak-rabotaet)
 - [Нехватка врачей в мире и в России: причины, цифры, прогноз до 2030 года](https://лаб-гид.рф/articles/nehvatka-vrachej-prichiny-prognoz)
 - [ИИ-консультанты по здоровью в мире: как расшифровка анализов стала обычным делом](https://лаб-гид.рф/articles/ai-konsultanty-po-zdorovyu-v-mire)
