@@ -11,11 +11,31 @@ import type { Article as ArticleItem } from '@/data/articles';
 
 const URL_RE = /(https?:\/\/[^\s,]+)/g;
 
+const INNER_RE = /(\[[^\]]+\]\(\/[^)\s]*\))/g;
+const INNER_ONE = /^\[([^\]]+)\]\((\/[^)\s]*)\)$/;
+
 const renderWithLinks = (text: string) =>
+  text.split(INNER_RE).flatMap((chunk, ci) => {
+    const m = chunk.match(INNER_ONE);
+    if (m) {
+      return [
+        <Link
+          key={`i${ci}`}
+          to={m[2]}
+          className="font-semibold text-accent underline underline-offset-2 hover:text-hand"
+        >
+          {m[1]}
+        </Link>,
+      ];
+    }
+    return renderExternal(chunk, ci);
+  });
+
+const renderExternal = (text: string, ci: number) =>
   text.split(URL_RE).map((part, i) =>
     /^https?:\/\//.test(part) ? (
       <a
-        key={i}
+        key={`${ci}-${i}`}
         href={part}
         target="_blank"
         rel="noopener noreferrer"
