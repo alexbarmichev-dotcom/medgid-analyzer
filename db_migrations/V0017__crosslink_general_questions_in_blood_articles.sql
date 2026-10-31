@@ -1,0 +1,3 @@
+UPDATE articles SET body = regexp_replace(body, E'(Читайте также: [^\n]*?) и (\\[[^\n]*)\\.\n', E'\\1, \\2 и [Общие вопросы про анализы: 10 ответов простым языком](/articles/obshchie-voprosy-pro-analizy).\n')
+WHERE slug IN ('rasshifrovka-obshchego-analiza-krovi', 'biokhimicheskiy-analiz-krovi-rasshifrovka', 'preddiabet-kak-uznat-po-analizam', 'skolko-parametrov-v-krovi-pochemu-issleduyut-ne-vse')
+AND body NOT LIKE '%/articles/obshchie-voprosy-pro-analizy%';
