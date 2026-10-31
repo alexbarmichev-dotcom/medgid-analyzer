@@ -2,7 +2,7 @@ import { SITE_URL } from '@/lib/seo';
 import type { ArticleFull } from '@/lib/articlesApi';
 
 const parseAuthor = (author: string) => {
-  const m = author.match(/^(Врач общей практики)\s+(.+)$/);
+  const m = author.match(/^(Врач общей практики|Профессор)\s+(.+)$/);
   if (m) return { '@type': 'Person', name: m[2].trim(), jobTitle: m[1] };
   return { '@type': 'Person', name: author };
 };
