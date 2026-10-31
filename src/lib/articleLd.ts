@@ -27,6 +27,7 @@ export const articleLdScripts = (a: ArticleFull, path: string) => {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: a.title,
+    name: a.seoTitle ?? a.title,
     description: a.seoDescription ?? a.excerpt,
     inLanguage: 'ru',
     mainEntityOfPage: url,

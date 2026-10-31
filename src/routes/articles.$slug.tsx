@@ -19,7 +19,7 @@ export const Route = createFileRoute('/articles/$slug')({
   head: ({ loaderData, params }) => {
     const a = loaderData?.article;
     const head = pageHead({
-      title: a ? `${a.title} — ЛабГид` : undefined,
+      title: a ? a.seoTitle ?? `${a.title} — ЛабГид` : undefined,
       description: a ? a.seoDescription ?? a.excerpt : undefined,
       path: `/articles/${params.slug}`,
     });
