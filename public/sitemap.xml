@@ -127,6 +127,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://лаб-гид.рф/articles/obshchie-voprosy-pro-analizy</loc>
+    <lastmod>2026-10-31</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://лаб-гид.рф/articles/personalnaya-medicina-i-ii-nablyudenie-za-zdorovem</loc>
     <lastmod>2026-10-30</lastmod>
     <changefreq>monthly</changefreq>

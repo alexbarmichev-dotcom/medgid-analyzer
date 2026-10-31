@@ -13,6 +13,7 @@ const TOPICS_BY_SLUG: Record<string, TopicId[]> = {
   'skolko-parametrov-v-krovi-pochemu-issleduyut-ne-vse': ['blood'],
   'preddiabet-kak-uznat-po-analizam': ['blood'],
   'istoriya-rasshifrovki-analizov': ['blood'],
+  'obshchie-voprosy-pro-analizy': ['blood'],
   'ai-konsultanty-po-zdorovyu-v-mire': ['ai'],
   'mozhno-li-doveryat-ii-rasshifrovke-analizov': ['ai'],
   'personalnaya-medicina-i-ii-nablyudenie-za-zdorovem': ['ai', 'blood'],
