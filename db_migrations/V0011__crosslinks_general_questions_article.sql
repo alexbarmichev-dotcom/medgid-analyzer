@@ -1,0 +1,2 @@
+UPDATE articles SET body = replace(body, E'## Что делать с готовыми анализами', E'Читайте также: [Какие анализы сдать, если что-то не так](/articles/kakie-analizy-sdat-po-simptomam), [Расшифровка общего анализа крови](/articles/rasshifrovka-obshchego-analiza-krovi) и [Биохимический анализ крови: расшифровка показателей](/articles/biokhimicheskiy-analiz-krovi-rasshifrovka).\n\n## Что делать с готовыми анализами')
+WHERE slug = 'obshchie-voprosy-pro-analizy' AND body NOT LIKE '%Читайте также:%';
